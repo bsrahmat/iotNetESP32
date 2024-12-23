@@ -1,4 +1,4 @@
-#include <iotNetESP32.h>
+#include <IotNetESP32.h>
 
 // WiFi Credentials
 constexpr char WIFI_SSID[] = "YOUR_WIFI_SSID";
@@ -9,7 +9,7 @@ constexpr char MQTT_USERNAME[] = "YOUR_MQTT_USERNAME";
 constexpr char MQTT_PASSWORD[] = "YOUR_MQTT_PASSWORD";
 constexpr char DASHBOARD_ID[] = "YOUR_DASHBOARD_ID";
 
-iotNetESP32 tunnel;
+IotNetESP32 tunnel;
 
 const int potentiometerPin = 34;
 

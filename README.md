@@ -1,6 +1,6 @@
-# iot.net Library
+# i-ot.net Library
 
-iotNetESP32 is a library for ESP32 that simplifies IoT development by providing pre-configured WiFi, MQTT, and HTTP client functionalities, enabling seamless integration with `https://i-ot.net` platforms.
+IotNetESP32 is a library for ESP32 that simplifies IoT development by providing pre-configured WiFi, MQTT, and HTTP client functionalities, enabling seamless integration with `https://i-ot.net` platforms.
 
 ## Features
 
@@ -16,26 +16,26 @@ iotNetESP32 is a library for ESP32 that simplifies IoT development by providing 
 
 ## Installation
 
-To use the iotNetESP32 library in your Arduino project, you have two options:
+To use the IotNetESP32 library in your Arduino project, you have two options:
 
 ### Using Library Manager (Recommended)
 
 - Open your Arduino IDE
 - Go to `Sketch` -> `Include Library` -> `Manage Libraries`
-- Search for `iotNetESP32` and install it
+- Search for `IotNetESP32` and install it
 
 ### Manual Installation
 
 - Download the ZIP file from this repository
 - Open Arduino IDE, select `Sketch` > `Include Library` > `Add .ZIP Library...` and select the downloaded ZIP file
-- After installation, the iotNetESP32 library can be used in your project
+- After installation, the IotNetESP32 library can be used in your project
 
 ## Usage
 
-To use the iotNetESP32 library in your project, you need to include the library in your sketch and initialize the library with your device credentials.
+To use the IotNetESP32 library in your project, you need to include the library in your sketch and initialize the library with your device credentials.
 
 ```cpp
-#include <iotNetESP32.h>
+#include <IotNetESP32.h>
 
 // WiFi Credentials
 constexpr char WIFI_SSID[] = "YOUR_WIFI_SSID";
@@ -46,7 +46,7 @@ constexpr char MQTT_USERNAME[] = "YOUR_MQTT_USERNAME";
 constexpr char MQTT_PASSWORD[] = "YOUR_MQTT_PASSWORD";
 constexpr char DASHBOARD_ID[] = "YOUR_DASHBOARD_ID";
 
-iotNetESP32 tunnel;
+IotNetESP32 tunnel;
 
 const int potentiometerPin = 34;
 
@@ -81,6 +81,6 @@ void loop() {
 }
 ```
 
-This example demonstrates how to use the iotNetESP32 library to connect to a WiFi network, setup MQTT communication, and control a virtual pin. The potentiometer is read and sent to a virtual pin, and the LED is controlled based on the value of the virtual pin.
+This example demonstrates how to use the IotNetESP32 library to connect to a WiFi network, setup MQTT communication, and control a virtual pin. The potentiometer is read and sent to a virtual pin, and the LED is controlled based on the value of the virtual pin.
 
 For more detailed examples and documentation, please refer to the [examples](examples) folder in this repository.

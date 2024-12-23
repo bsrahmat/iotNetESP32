@@ -9,7 +9,7 @@
 #include <Update.h>
 #include "i-ot.net.h"
 
-class iotNetESP32 {
+class IotNetESP32 {
     private:
         static const int MAX_VIRTUAL_PINS = 20;
         struct DeviceState {
@@ -39,7 +39,7 @@ class iotNetESP32 {
         PubSubClient mqttHandler;
 
     public:
-        iotNetESP32();
+        IotNetESP32();
 
         void setupWiFi(const char* ssid, const char* password);
         void setupMQTT(const char* username, const char* password, const char* dashboard);

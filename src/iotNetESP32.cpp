@@ -1,15 +1,15 @@
-#include "iotNetESP32.h"
+#include "IotNetESP32.h"
 
 TaskHandle_t otaTaskHandle = NULL;
 
-iotNetESP32::iotNetESP32()
+IotNetESP32::IotNetESP32()
     : mqttHandler(mqttClient), stateMux(portMUX_INITIALIZER_UNLOCKED),
       mqttUsername(nullptr), mqttPassword(nullptr), dashboardId(nullptr),
       signature(nullptr), nonce(nullptr) {setupSSL();}
 
-iotNetESP32::DeviceState::DeviceState() : topicCount(0), updateRequired(false) {}
+IotNetESP32::DeviceState::DeviceState() : topicCount(0), updateRequired(false) {}
 
-void iotNetESP32::setupWiFi(const char* ssid, const char* password) {
+void IotNetESP32::setupWiFi(const char* ssid, const char* password) {
     Serial.print(F("Connecting to WiFi "));
     Serial.println(ssid);
     WiFi.begin(ssid, password);
@@ -22,7 +22,7 @@ void iotNetESP32::setupWiFi(const char* ssid, const char* password) {
     Serial.println(F("\nConnected to WiFi"));
 }
 
-void iotNetESP32::setupSSL() {
+void IotNetESP32::setupSSL() {
     Serial.println(F("Setting up SSL..."));
     apiClient.setCACert(var_4);
     mqttClient.setCACert(var_6);
@@ -33,13 +33,13 @@ void iotNetESP32::setupSSL() {
     Serial.println(F("=========="));
 }
 
-void iotNetESP32::setupMQTT(const char* username, const char* password, const char* dashboard) {
+void IotNetESP32::setupMQTT(const char* username, const char* password, const char* dashboard) {
     mqttUsername = username;
     mqttPassword = password; 
     dashboardId = dashboard;
 }
 
-bool iotNetESP32::addVirtualPin(const char* pin, const char* pinName) {
+bool IotNetESP32::addVirtualPin(const char* pin, const char* pinName) {
     if (state.topicCount >= MAX_VIRTUAL_PINS) {
         Serial.println(F("Error: Maximum number of topics reached"));
         return false;
@@ -91,7 +91,7 @@ bool iotNetESP32::addVirtualPin(const char* pin, const char* pinName) {
     return true;
 }
 
-void iotNetESP32::validateDevice() {
+void IotNetESP32::validateDevice() {
     Serial.println(F("Validating device..."));
 
     String url = String(var_3) + "/devices/validate";
@@ -135,7 +135,7 @@ void iotNetESP32::validateDevice() {
     apiHttps.end();
 }
 
-void iotNetESP32::updateStatusVersions(const char* status) {
+void IotNetESP32::updateStatusVersions(const char* status) {
     Serial.println(F("Updating status versions..."));
 
     String url = String(var_3) + "/devices/versions/" + state.version;
@@ -175,7 +175,7 @@ void iotNetESP32::updateStatusVersions(const char* status) {
     apiHttps.end();
 }
 
-int iotNetESP32::virtualPinInteraction(const char* pin) {
+int IotNetESP32::virtualPinInteraction(const char* pin) {
     for (int i = 0; i < state.topicCount; i++) {
         if (String(pin) == state.virtualPins[i]) {
             return state.virtualPinValues[i];
@@ -184,20 +184,20 @@ int iotNetESP32::virtualPinInteraction(const char* pin) {
     return -1;
 }
 
-int iotNetESP32::virtualPinVisualization(const char* pin, int value) {
+int IotNetESP32::virtualPinVisualization(const char* pin, int value) {
     return updateVirtualPin(pin, String(value).c_str(), value);
 }
 
-int iotNetESP32::virtualPinVisualization(const char* pin, float value) {
+int IotNetESP32::virtualPinVisualization(const char* pin, float value) {
     int intValue = (int)(value * 100);
     return updateVirtualPin(pin, String(value, 2).c_str(), intValue);
 }
 
-int iotNetESP32::virtualPinVisualization(const char* pin, const char* value) {
+int IotNetESP32::virtualPinVisualization(const char* pin, const char* value) {
     return updateVirtualPin(pin, value, atoi(value));
 }
 
-int iotNetESP32::updateVirtualPin(const char* pin, const char* pubValue, int storeValue) {
+int IotNetESP32::updateVirtualPin(const char* pin, const char* pubValue, int storeValue) {
     for (int i = 0; i < state.topicCount; i++) {
         if (String(pin) == state.virtualPins[i]) {
             state.virtualPinValues[i] = storeValue;
@@ -208,7 +208,7 @@ int iotNetESP32::updateVirtualPin(const char* pin, const char* pubValue, int sto
     return -1;
 }
 
-void iotNetESP32::performFirmwareUpdate() {
+void IotNetESP32::performFirmwareUpdate() {
     Serial.print(F("Starting firmware update...\nURL: "));
     Serial.println(state.urlOta.c_str());
     updateStatusVersions("live");
@@ -273,7 +273,7 @@ void iotNetESP32::performFirmwareUpdate() {
     storageHttps.end();
 }
 
-void iotNetESP32::handleMQTTCallback(char* topic, byte* payload, unsigned int length) {
+void IotNetESP32::handleMQTTCallback(char* topic, byte* payload, unsigned int length) {
     char message[length + 1];
     memcpy(message, payload, length);
     message[length] = '\0';
@@ -307,7 +307,7 @@ void iotNetESP32::handleMQTTCallback(char* topic, byte* payload, unsigned int le
 }
 
 void otaTask(void *pvParameters) {
-    iotNetESP32* tunnel = (iotNetESP32*)pvParameters;
+    IotNetESP32* tunnel = (IotNetESP32*)pvParameters;
     
     for(;;) {
         portENTER_CRITICAL(&tunnel->stateMux);
@@ -324,7 +324,7 @@ void otaTask(void *pvParameters) {
     }
 }
 
-void iotNetESP32::setup() {
+void IotNetESP32::setup() {
     Serial.println(F("Setting up MQTT connection..."));
 
     mqttHandler.setServer(var_2, var_1);
@@ -373,7 +373,7 @@ void iotNetESP32::setup() {
     Serial.println(F("=========="));
 }
 
-void iotNetESP32::loop() {
+void IotNetESP32::loop() {
     if (!mqttHandler.connected()) {
         setupMQTT(mqttUsername, mqttPassword, dashboardId);
     }
