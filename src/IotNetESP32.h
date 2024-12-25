@@ -26,6 +26,7 @@ class IotNetESP32 {
 
         void setupSSL();
         void validateDevice();
+        void setupConnection();
         void updateStatusVersions(const char* status);
         void performFirmwareUpdate();
         void handleMQTTCallback(char* topic, byte* payload, unsigned int length);
@@ -48,8 +49,7 @@ class IotNetESP32 {
         int virtualPinVisualization(const char* pin, int value);
         int virtualPinVisualization(const char* pin, float value);
         int virtualPinVisualization(const char* pin, const char* value);
-        void setup();
-        void loop();
+        void run();
 
         DeviceState state;
         portMUX_TYPE stateMux;
