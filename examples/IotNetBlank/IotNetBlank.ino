@@ -15,9 +15,8 @@ void setup() {
     Serial.begin(115200);
     tunnel.setupWiFi(WIFI_SSID, WIFI_PASSWORD);
     tunnel.setupMQTT(MQTT_USERNAME, MQTT_PASSWORD, DASHBOARD_ID);
-    tunnel.setup();
 }
 
 void loop() {
-    tunnel.loop();
+    tunnel.run();
 }

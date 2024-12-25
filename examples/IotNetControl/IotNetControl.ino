@@ -18,13 +18,12 @@ void setup() {
   tunnel.setupWiFi(WIFI_SSID, WIFI_PASSWORD);
   tunnel.setupMQTT(MQTT_USERNAME, MQTT_PASSWORD, DASHBOARD_ID);
   tunnel.addVirtualPin("V1", "Button Auto Set");
-  tunnel.setup();
 
   pinMode(LED_BUILTIN, OUTPUT);
 }
 
 void loop() {
-  tunnel.loop();
+  tunnel.run();
   int value = tunnel.virtualPinInteraction("V1");
   if (value == 1) {
     digitalWrite(LED_BUILTIN, HIGH);

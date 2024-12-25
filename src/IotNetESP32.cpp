@@ -324,7 +324,7 @@ void otaTask(void *pvParameters) {
     }
 }
 
-void IotNetESP32::setup() {
+void IotNetESP32::setupConnection() {
     Serial.println(F("Setting up MQTT connection..."));
 
     mqttHandler.setServer(var_2, var_1);
@@ -373,9 +373,10 @@ void IotNetESP32::setup() {
     Serial.println(F("=========="));
 }
 
-void IotNetESP32::loop() {
+void IotNetESP32::run() {
     if (!mqttHandler.connected()) {
         setupMQTT(mqttUsername, mqttPassword, dashboardId);
+        setupConnection();
     }
     mqttHandler.loop();
     vTaskDelay(10 / portTICK_PERIOD_MS);

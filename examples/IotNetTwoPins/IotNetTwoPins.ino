@@ -21,14 +21,13 @@ void setup() {
   tunnel.setupMQTT(MQTT_USERNAME, MQTT_PASSWORD, DASHBOARD_ID);
   tunnel.addVirtualPin("V1", "Potentiometer");
   tunnel.addVirtualPin("V2", "LED");
-  tunnel.setup();
 
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(potentiometerPin, INPUT);
 }
 
 void loop() {
-  tunnel.loop();
+  tunnel.run();
   
   // Read potentiometer and send to V2
   int sensorValue = analogRead(potentiometerPin);

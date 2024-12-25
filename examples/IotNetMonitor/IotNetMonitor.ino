@@ -20,13 +20,13 @@ void setup() {
   tunnel.setupWiFi(WIFI_SSID, WIFI_PASSWORD);
   tunnel.setupMQTT(MQTT_USERNAME, MQTT_PASSWORD, DASHBOARD_ID);
   tunnel.addVirtualPin("V1", "Potentiometer");
-  tunnel.setup();
 
   pinMode(potentiometerPin, INPUT);
 }
 
 void loop() {
-  tunnel.loop();
+  tunnel.run();
   int value = analogRead(potentiometerPin);
   tunnel.virtualPinVisualization("V1", value);
 }
+
