@@ -1,0 +1,9 @@
+BasedOnStyle: LLVM
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 100
+AllowShortFunctionsOnASingleLine: Inline
+SortIncludes: true
+# Add exclusion for __asm__ directives
+CommentPragmas: "^.*__asm__.*$"
