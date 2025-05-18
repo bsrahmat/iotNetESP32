@@ -1,4 +1,8 @@
 .pio
 .vscode
-
+.dist
+utils
+certs
+src/iotNetCredentials.cpp
+src/iotNetCredentials.h
 src/main.cpp

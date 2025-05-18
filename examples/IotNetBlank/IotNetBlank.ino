@@ -1,22 +1,24 @@
+#include <Arduino.h>
 #include <IotNetESP32.h>
 
-// WiFi Credentials
-constexpr char WIFI_SSID[] = "YOUR_WIFI_SSID";
-constexpr char WIFI_PASSWORD[] = "YOUR_WIFI_PASSWORD";
+// WiFi credentials
+const char* WIFI_SSID = "YOUR_WIFI_SSID";
+const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
 
-// MQTT Credentials
-constexpr char MQTT_USERNAME[] = "YOUR_MQTT_USERNAME";
-constexpr char MQTT_PASSWORD[] = "YOUR_MQTT_PASSWORD";
-constexpr char DASHBOARD_ID[] = "YOUR_DASHBOARD_ID";
+// Authentication credentials
+const char* IOTNET_USERNAME = "YOUR_IOTNET_USERNAME";
+const char* IOTNET_PASSWORD = "YOUR_IOTNET_PASSWORD";
+const char* IOTNET_BOARD_NAME = "YOUR_IOTNET_BOARD_NAME";
 
-IotNetESP32 tunnel;
+IotNetESP32 iotnet;
 
 void setup() {
     Serial.begin(115200);
-    tunnel.setupWiFi(WIFI_SSID, WIFI_PASSWORD);
-    tunnel.setupMQTT(MQTT_USERNAME, MQTT_PASSWORD, DASHBOARD_ID);
+
+    iotnet.version("1.0.0");
+    iotnet.begin(WIFI_SSID, WIFI_PASSWORD);
 }
 
 void loop() {
-    tunnel.run();
+    iotnet.run();
 }

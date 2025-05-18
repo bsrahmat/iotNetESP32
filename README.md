@@ -7,7 +7,7 @@ IotNetESP32 is a library for ESP32 that simplifies IoT development by providing 
 - **WiFi Connectivity Management**: Efficiently manages WiFi connections to ensure the device stays connected to the network.
 - **Secure MQTT Communication**: Supports encrypted MQTT communication for secure data transfer.
 - **HTTP Client with SSL Support**: Provides HTTP client functionality with SSL support for secure interactions.
-- **Virtual Pin System**: Enables device interaction through a virtual pin system, supporting up to 20 virtual pins.
+- **Virtual Pin System**: Enables device interaction through a virtual pin system, supporting up to 50 virtual pins.
 - **Real-Time Dashboard Integration**: Integrates with a real-time dashboard for data visualization and monitoring.
 - **Over-The-Air (OTA) Firmware Updates**: Allows wireless firmware updates for easy device maintenance.
 - **JSON Data Handling**: Processes data in JSON format for high compatibility and flexibility.
@@ -34,53 +34,189 @@ To use the IotNetESP32 library in your Arduino project, you have two options:
 
 To use the IotNetESP32 library in your project, you need to include the library in your sketch and initialize the library with your device credentials.
 
+### Basic Usage Example
+
 ```cpp
+#include <Arduino.h>
 #include <IotNetESP32.h>
 
-// WiFi Credentials
-constexpr char WIFI_SSID[] = "YOUR_WIFI_SSID";
-constexpr char WIFI_PASSWORD[] = "YOUR_WIFI_PASSWORD";
+// WiFi credentials
+const char* WIFI_SSID = "YOUR_WIFI_SSID";
+const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
 
-// MQTT Credentials
-constexpr char MQTT_USERNAME[] = "YOUR_MQTT_USERNAME";
-constexpr char MQTT_PASSWORD[] = "YOUR_MQTT_PASSWORD";
-constexpr char DASHBOARD_ID[] = "YOUR_DASHBOARD_ID";
+// Authentication credentials
+const char* IOTNET_USERNAME = "YOUR_IOTNET_USERNAME";
+const char* IOTNET_PASSWORD = "YOUR_IOTNET_PASSWORD";
+const char* IOTNET_BOARD_NAME = "YOUR_IOTNET_BOARD_NAME";
 
-IotNetESP32 tunnel;
-
-const int potentiometerPin = 34;
+IotNetESP32 iotnet;
 
 void setup() {
-  Serial.begin(115200);
+    Serial.begin(115200);
 
-  // Setup WiFi
-  tunnel.setupWiFi(WIFI_SSID, WIFI_PASSWORD);
-  tunnel.setupMQTT(MQTT_USERNAME, MQTT_PASSWORD, DASHBOARD_ID);
-  tunnel.addVirtualPin("V1", "Potentiometer");
-  tunnel.addVirtualPin("V2", "LED");
-  tunnel.setup();
-
-  pinMode(LED_BUILTIN, OUTPUT);
-  pinMode(potentiometerPin, INPUT);
+    iotnet.version("1.0.0");
+    iotnet.begin(WIFI_SSID, WIFI_PASSWORD);
 }
 
 void loop() {
-  tunnel.loop();
-
-  // Read potentiometer and send to V2
-  int sensorValue = analogRead(potentiometerPin);
-  tunnel.virtualPinVisualization("V2", sensorValue);
-
-  // Control LED based on V1
-  int value = tunnel.virtualPinInteraction("V1");
-  if (value == 1) {
-    digitalWrite(LED_BUILTIN, HIGH);
-  } else {
-    digitalWrite(LED_BUILTIN, LOW);
-  }
+    iotnet.run();
 }
 ```
 
-This example demonstrates how to use the IotNetESP32 library to connect to a WiFi network, setup MQTT communication, and control a virtual pin. The potentiometer is read and sent to a virtual pin, and the LED is controlled based on the value of the virtual pin.
+### LED Control Example
 
-For more detailed examples and documentation, please refer to the [examples](examples) folder in this repository.
+Control an LED using a virtual pin:
+
+```cpp
+#include <Arduino.h>
+#include <IotNetESP32.h>
+
+int LED_PIN = LED_BUILTIN;
+
+// WiFi credentials
+const char* WIFI_SSID = "YOUR_WIFI_SSID";
+const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
+
+// Authentication credentials
+const char* IOTNET_USERNAME = "YOUR_IOTNET_USERNAME";
+const char* IOTNET_PASSWORD = "YOUR_IOTNET_PASSWORD";
+const char* IOTNET_BOARD_NAME = "YOUR_IOTNET_BOARD_NAME";
+
+IotNetESP32 iotnet;
+
+void handlePinV1() {
+    if (!iotnet.hasNewValue("V1")) {
+        return;
+    }
+
+    int data = iotnet.virtualRead<int>("V1");
+    if(data == 1) {
+        digitalWrite(LED_PIN, HIGH);
+    } else if (data == 0) {
+        digitalWrite(LED_PIN, LOW);
+    }
+}
+
+void setup() {
+    Serial.begin(115200);
+    
+    pinMode(LED_PIN, OUTPUT);
+    digitalWrite(LED_PIN, LOW);
+
+    iotnet.version("1.0.0");
+    iotnet.begin(WIFI_SSID, WIFI_PASSWORD);
+}
+
+void loop() {
+    iotnet.run();
+    
+    handlePinV1();
+}
+```
+
+### Advanced Example: Multiple Virtual Pins
+
+This example demonstrates how to use multiple virtual pins to create counters and control an LED:
+
+```cpp
+#include <Arduino.h>
+#include <IotNetESP32.h>
+
+int LED_PIN = 2;
+
+// WiFi credentials
+const char* WIFI_SSID = "YOUR_WIFI_SSID";
+const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
+
+// Authentication credentials
+const char* IOTNET_USERNAME = "YOUR_IOTNET_USERNAME";
+const char* IOTNET_PASSWORD = "YOUR_IOTNET_PASSWORD";
+const char* IOTNET_BOARD_NAME = "YOUR_IOTNET_BOARD_NAME";
+
+IotNetESP32 iotnet;
+
+void handlePinV1() {
+    static unsigned long lastUpdate = 0;
+    static int counter = 1;
+
+    if (iotnet.shouldUpdate(lastUpdate, 50)) {
+        iotnet.virtualWrite("V1", counter++);
+        if (counter > 100) {
+            counter = 1;
+        }
+    }
+}
+
+void handlePinV2() {
+    static unsigned long lastUpdate = 0;
+    static int counter = 100;
+
+    if (iotnet.shouldUpdate(lastUpdate, 50)) {
+        iotnet.virtualWrite("V2", counter--);
+        if (counter < 1) {
+            counter = 100;
+        }
+    }
+}
+
+void handlePinV3() {
+    if (!iotnet.hasNewValue("V3")) {
+        return;
+    }
+
+    int data = iotnet.virtualRead<int>("V3");
+    if(data == 1) {
+        digitalWrite(LED_PIN, HIGH);
+    } else if (data == 0) {
+        digitalWrite(LED_PIN, LOW);
+    }
+}
+
+void handlePinV4() {
+    if (!iotnet.hasNewValue("V4")) {
+        return;
+    }
+
+    int data = iotnet.virtualRead<int>("V4");
+    iotnet.virtualWrite("V5", data);
+}
+
+void setup() {
+    Serial.begin(115200);
+    
+    pinMode(LED_PIN, OUTPUT);
+    digitalWrite(LED_PIN, LOW);
+
+    iotnet.version("1.0.0");
+    iotnet.begin(WIFI_SSID, WIFI_PASSWORD);
+}
+
+void loop() {
+    iotnet.run();
+    
+    handlePinV1();
+    handlePinV2();
+    handlePinV3();
+    handlePinV4();
+}
+```
+
+## Key Features and Functions
+
+- `iotnet.begin(WIFI_SSID, WIFI_PASSWORD)`: Initialize WiFi connection with your credentials
+- `iotnet.version(VERSION)`: Set the firmware version for OTA updates
+- `iotnet.run()`: Main method to handle MQTT connection and message processing
+- `iotnet.virtualRead<T>(PIN)`: Read data from a virtual pin with type conversion
+- `iotnet.virtualWrite(PIN, VALUE)`: Write data to a virtual pin
+- `iotnet.hasNewValue(PIN)`: Check if a virtual pin has a new value
+- `iotnet.shouldUpdate(lastUpdate, interval)`: Helper for time-based updates
+
+## Available Examples
+
+For more detailed examples and documentation, please refer to the [examples](examples) folder in this repository:
+
+- **IotNetBlank**: Basic template to start your project
+- **IotNetControl**: Control an LED with virtual pins
+- **IotNetCounter**: Implement counters and multiple pin interactions
+- **IotNetMonitor**: Monitor sensors and display data
+- **IotNetTwoPins**: Demonstrate interaction between two virtual pins
