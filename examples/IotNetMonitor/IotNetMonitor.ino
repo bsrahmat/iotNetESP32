@@ -1,8 +1,9 @@
 #include <Arduino.h>
 #include <IotNetESP32.h>
+#include <WiFi.h>
 
 // Define pin for potentiometer
-int POTENTIOMETER_PIN = 34;
+const int POTENTIOMETER_PIN = 34;
 
 // WiFi credentials
 const char* WIFI_SSID = "YOUR_WIFI_SSID";
@@ -24,16 +25,41 @@ void handlePotentiometer() {
     }
 }
 
+void setupWiFi() {
+    Serial.println("Connecting to WiFi...");
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+    }
+
+    Serial.println("\nConnected to WiFi!");
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
+}
+
+void checkWiFiConnection() {
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("WiFi connection lost. Reconnecting...");
+        setupWiFi();
+    }
+}
+
 void setup() {
     Serial.begin(115200);
     
     pinMode(POTENTIOMETER_PIN, INPUT);
 
+    setupWiFi();
+    
     iotnet.version("1.0.0");
-    iotnet.begin(WIFI_SSID, WIFI_PASSWORD);
+    iotnet.begin();
 }
 
 void loop() {
+    checkWiFiConnection();
+    
     iotnet.run();
     
     handlePotentiometer();

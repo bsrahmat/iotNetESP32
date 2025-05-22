@@ -39,6 +39,7 @@ To use the IotNetESP32 library in your project, you need to include the library 
 ```cpp
 #include <Arduino.h>
 #include <IotNetESP32.h>
+#include <WiFi.h>
 
 // WiFi credentials
 const char* WIFI_SSID = "YOUR_WIFI_SSID";
@@ -51,14 +52,39 @@ const char* IOTNET_BOARD_NAME = "YOUR_IOTNET_BOARD_NAME";
 
 IotNetESP32 iotnet;
 
+void setupWiFi() {
+    Serial.println("Connecting to WiFi...");
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+    }
+
+    Serial.println("\nConnected to WiFi!");
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
+}
+
+void checkWiFiConnection() {
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("WiFi connection lost. Reconnecting...");
+        setupWiFi();
+    }
+}
+
 void setup() {
     Serial.begin(115200);
 
+    setupWiFi();
+
     iotnet.version("1.0.0");
-    iotnet.begin(WIFI_SSID, WIFI_PASSWORD);
+    iotnet.begin();
 }
 
 void loop() {
+    checkWiFiConnection();
+
     iotnet.run();
 }
 ```
@@ -70,8 +96,9 @@ Control an LED using a virtual pin:
 ```cpp
 #include <Arduino.h>
 #include <IotNetESP32.h>
+#include <WiFi.h>
 
-int LED_PIN = LED_BUILTIN;
+const int LED_PIN = LED_BUILTIN;
 
 // WiFi credentials
 const char* WIFI_SSID = "YOUR_WIFI_SSID";
@@ -97,19 +124,44 @@ void handlePinV1() {
     }
 }
 
+void setupWiFi() {
+    Serial.println("Connecting to WiFi...");
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+    }
+
+    Serial.println("\nConnected to WiFi!");
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
+}
+
+void checkWiFiConnection() {
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("WiFi connection lost. Reconnecting...");
+        setupWiFi();
+    }
+}
+
 void setup() {
     Serial.begin(115200);
-    
+
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, LOW);
 
+    setupWiFi();
+
     iotnet.version("1.0.0");
-    iotnet.begin(WIFI_SSID, WIFI_PASSWORD);
+    iotnet.begin();
 }
 
 void loop() {
+    checkWiFiConnection();
+
     iotnet.run();
-    
+
     handlePinV1();
 }
 ```
@@ -121,8 +173,9 @@ This example demonstrates how to use multiple virtual pins to create counters an
 ```cpp
 #include <Arduino.h>
 #include <IotNetESP32.h>
+#include <WiFi.h>
 
-int LED_PIN = 2;
+const int LED_PIN = 2;
 
 // WiFi credentials
 const char* WIFI_SSID = "YOUR_WIFI_SSID";
@@ -181,19 +234,44 @@ void handlePinV4() {
     iotnet.virtualWrite("V5", data);
 }
 
+void setupWiFi() {
+    Serial.println("Connecting to WiFi...");
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+    }
+
+    Serial.println("\nConnected to WiFi!");
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
+}
+
+void checkWiFiConnection() {
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("WiFi connection lost. Reconnecting...");
+        setupWiFi();
+    }
+}
+
 void setup() {
     Serial.begin(115200);
-    
+
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, LOW);
 
+    setupWiFi();
+
     iotnet.version("1.0.0");
-    iotnet.begin(WIFI_SSID, WIFI_PASSWORD);
+    iotnet.begin();
 }
 
 void loop() {
+    checkWiFiConnection();
+
     iotnet.run();
-    
+
     handlePinV1();
     handlePinV2();
     handlePinV3();
@@ -203,7 +281,7 @@ void loop() {
 
 ## Key Features and Functions
 
-- `iotnet.begin(WIFI_SSID, WIFI_PASSWORD)`: Initialize WiFi connection with your credentials
+- `iotnet.begin()`: Initialize IoTNet connection
 - `iotnet.version(VERSION)`: Set the firmware version for OTA updates
 - `iotnet.run()`: Main method to handle MQTT connection and message processing
 - `iotnet.virtualRead<T>(PIN)`: Read data from a virtual pin with type conversion

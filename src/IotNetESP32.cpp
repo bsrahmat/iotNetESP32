@@ -15,8 +15,8 @@ Preferences preferences;
 //=======================================================================================
 
 IotNetESP32::IotNetESP32()
-    : mqttClient(espClient), credentials{nullptr, nullptr, nullptr, nullptr, nullptr},
-      mqttConfig{nullptr, 0, 0}, certificates{nullptr, nullptr, nullptr}, numCallbacks(0) {
+    : mqttClient(espClient), credentials{nullptr, nullptr, nullptr}, mqttConfig{nullptr, 0, 0},
+      certificates{nullptr, nullptr, nullptr}, numCallbacks(0) {
     currentInstance = this;
     strcpy(currentFirmwareVersion, "1.0.0");
     for (int i = 0; i < MAX_PINS; i++) {
@@ -30,34 +30,60 @@ IotNetESP32::IotNetESP32()
 // Initialization and Connection Methods
 //=======================================================================================
 
-void IotNetESP32::begin(const char *wifiSsid, const char *wifiPassword) {
-    if (!wifiSsid || !wifiPassword) {
-        Serial.println("Error: WiFi credentials cannot be null");
-        return;
-    }
-
-    this->credentials.wifiSsid = wifiSsid;
-    this->credentials.wifiPassword = wifiPassword;
+void IotNetESP32::begin() {
+    this->credentials.mqttUsername = IOTNET_USERNAME;
+    this->credentials.mqttPassword = IOTNET_PASSWORD;
     this->credentials.boardName = IOTNET_BOARD_NAME;
 
     initPinTopic(mqttConfig.statusPin);
+
+    preferences.begin("iotnet", false);
+    bool otaInProgress = preferences.getBool("otaInProgress", false);
+    bool justUpdated = preferences.getBool("justUpdated", false);
+
+    if (otaInProgress && !justUpdated) {
+        Serial.println("Detected interrupted OTA update");
+        String targetVersion = preferences.getString("targetVer", "");
+        if (targetVersion.length() > 0) {
+            strncpy(currentFirmwareVersion, targetVersion.c_str(),
+                    sizeof(currentFirmwareVersion) - 1);
+            currentFirmwareVersion[sizeof(currentFirmwareVersion) - 1] = '\0';
+            Serial.printf("Using target version %s for failure reporting\n",
+                          currentFirmwareVersion);
+        }
+        preferences.putBool("otaInProgress", false);
+        preferences.putBool("pubFailed", true); 
+    }
+
+    if (justUpdated) {
+        preferences.putBool("justUpdated", false);
+        preferences.putBool("otaInProgress", false);
+    }
+
+    preferences.end();
+
     connect();
 }
 
 void IotNetESP32::connect() {
-    setMQTTCredentials(IOTNET_USERNAME, IOTNET_PASSWORD);
     setCertificates();
     setMQTTServer();
     setupCertificates();
-    setupWiFi(credentials.wifiSsid, credentials.wifiPassword);
     printLogo();
 
     bool justUpdated = false;
+    bool otaInterrupted = false;
+
     preferences.begin("iotnet", false);
     justUpdated = preferences.getBool("justUpdated", false);
+    otaInterrupted = preferences.getBool("otaInProgress", false);
+
     if (justUpdated) {
-        Serial.println("First boot after OTA update");
         preferences.putBool("justUpdated", false);
+    }
+
+    if (otaInterrupted) {
+        preferences.putBool("otaInProgress", false);
     }
     preferences.end();
 
@@ -76,19 +102,23 @@ void IotNetESP32::connect() {
         return;
     }
 
+    preferences.begin("iotnet", false);
+    bool needPublishFailed = preferences.getBool("pubFailed", false);
+
+    if (needPublishFailed) {
+        updateBoardStatus("failed");
+        preferences.putBool("pubFailed", false);
+    }
+    preferences.end();
+
     if (justUpdated) {
         publishToPin("V0", "online");
-        Serial.println("Published online status after OTA update");
     }
-}
 
-void IotNetESP32::setMQTTCredentials(const char *username, const char *password) {
-    if (!username || !password) {
-        Serial.println("Error: MQTT credentials are not set");
-        return;
+    if (otaInterrupted) {
+        updateBoardStatus("failed");
+        Serial.println("Reported interrupted OTA update as failed");
     }
-    this->credentials.mqttUsername = username;
-    this->credentials.mqttPassword = password;
 }
 
 void IotNetESP32::setCertificates() {
@@ -126,40 +156,15 @@ void IotNetESP32::setupCertificates() {
         espClient.setPrivateKey(certificates.clientKey);
 }
 
-void IotNetESP32::setupWiFi(const char *ssid, const char *password) {
-    if (!ssid || !password) {
-        Serial.println("Error: WiFi credentials cannot be null");
-        return;
-    }
-
-    Serial.printf("\nConnecting to %s", ssid);
-    WiFi.begin(ssid, password);
-
-    unsigned long startAttemptTime = millis();
-    bool connected = false;
-
-    while (!connected && millis() - startAttemptTime < WIFI_TIMEOUT_MS) {
-        connected = (WiFi.status() == WL_CONNECTED);
-        if (!connected) {
-            delay(500);
-            Serial.print(".");
-        }
-    }
-
-    if (connected) {
-        return;
-    }
-
-    Serial.println("\nFailed to connect to WiFi. Restarting...");
-    delay(3000);
-    ESP.restart();
-}
-
 void IotNetESP32::version(const char *version) {
     if (version) {
         strncpy(currentFirmwareVersion, version, sizeof(currentFirmwareVersion) - 1);
         currentFirmwareVersion[sizeof(currentFirmwareVersion) - 1] = '\0';
     }
+}
+
+const char *IotNetESP32::version() const {
+    return currentFirmwareVersion;
 }
 
 void IotNetESP32::setStatusPin(int pin) {
@@ -179,7 +184,6 @@ void IotNetESP32::printLogo() {
     Serial.println(" _/ // /_/ / / / / /|  / /___  / /");
     Serial.println("/___/\\____/ /_/ /_/ |_/_____/ /_/");
     Serial.println("");
-    Serial.printf("WiFi connected\nIP: %s\n", WiFi.localIP().toString().c_str());
     Serial.printf("Firmware version: %s\n", currentFirmwareVersion);
 }
 
@@ -207,16 +211,6 @@ void IotNetESP32::run() {
 }
 
 void IotNetESP32::checkConnections() {
-    if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("WiFi connection lost. Reconnecting...");
-        setupWiFi(credentials.wifiSsid, credentials.wifiPassword);
-        if (WiFi.status() == WL_CONNECTED) {
-            Serial.println("WiFi reconnected successfully");
-            Serial.printf("Connected to %s with IP: %s\n", credentials.wifiSsid,
-                          WiFi.localIP().toString().c_str());
-        }
-    }
-
     if (!mqttClient.connected()) {
         Serial.println("MQTT connection lost. Reconnecting...");
         if (reconnectMQTT()) {
@@ -456,11 +450,16 @@ void IotNetESP32::processOtaUpdate(const char *otaMessage) {
     strncpy(currentFirmwareVersion, doc["version"], sizeof(currentFirmwareVersion) - 1);
     currentFirmwareVersion[sizeof(currentFirmwareVersion) - 1] = '\0';
 
+    preferences.begin("iotnet", false);
+    preferences.putBool("otaInProgress", true);
+    preferences.putString("targetVer", String(doc["version"].as<const char *>()));
+    preferences.end();
+
     otaInfo->nonce = doc["nonce"];
     registerBoard();
     updateBoardStatus("pending");
 
-    xTaskCreate(otaUpdateTask, "OTA_UPDATE_TASK", 32768, otaInfo, 1, NULL);
+    otaUpdateTask(otaInfo);
 }
 
 void IotNetESP32::otaUpdateTask(void *parameters) {
@@ -491,6 +490,7 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
         Serial.println("Failed to begin HTTP request");
         if (currentInstance)
             currentInstance->updateBoardStatus("failed");
+        client.stop();
         delete otaInfo;
         vTaskDelete(NULL);
         return;
@@ -508,6 +508,7 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
         if (currentInstance)
             currentInstance->updateBoardStatus("failed");
         http.end();
+        client.stop();
         delete otaInfo;
         vTaskDelete(NULL);
         return;
@@ -529,6 +530,7 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
         if (currentInstance)
             currentInstance->updateBoardStatus("failed");
         http.end();
+        client.stop();
         delete otaInfo;
         vTaskDelete(NULL);
         return;
@@ -536,10 +538,16 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
 
     otaUrl = responseDoc["data"]["ota_url"].as<String>();
     http.end();
+    client.stop();
 
     Serial.println("Starting OTA firmware update...");
     if (currentInstance)
         currentInstance->updateBoardStatus("active");
+
+    Serial.print(F("Free memory before OTA: "));
+    Serial.print(ESP.getFreeHeap());
+    Serial.println(F(" bytes"));
+    Serial.println(F(""));
 
     HTTPClient updateHttp;
     WiFiClientSecure updateClient;
@@ -547,12 +555,16 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
     updateClient.setCACert(var_4);
     updateClient.setHandshakeTimeout(120);
 
-    esp_task_wdt_reset();
-
     if (!updateHttp.begin(updateClient, otaUrl)) {
         Serial.println("Failed to begin HTTP update request");
-        if (currentInstance)
+        if (currentInstance) {
             currentInstance->updateBoardStatus("failed");
+            // Reset the OTA progress flag
+            preferences.begin("iotnet", false);
+            preferences.putBool("otaInProgress", false);
+            preferences.end();
+        }
+        updateClient.stop();
         delete otaInfo;
         vTaskDelete(NULL);
         return;
@@ -563,19 +575,14 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
     int httpCode = updateHttp.GET();
     if (httpCode <= 0) {
         Serial.printf("HTTP GET failed, error: %s\n", updateHttp.errorToString(httpCode).c_str());
-        if (currentInstance)
+        if (currentInstance) {
             currentInstance->updateBoardStatus("failed");
+            preferences.begin("iotnet", false);
+            preferences.putBool("otaInProgress", false);
+            preferences.end();
+        }
         updateHttp.end();
-        delete otaInfo;
-        vTaskDelete(NULL);
-        return;
-    }
-
-    if (httpCode != HTTP_CODE_OK) {
-        Serial.printf("HTTP GET returned code %d\n", httpCode);
-        if (currentInstance)
-            currentInstance->updateBoardStatus("failed");
-        updateHttp.end();
+        updateClient.stop();
         delete otaInfo;
         vTaskDelete(NULL);
         return;
@@ -584,9 +591,15 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
     int contentLength = updateHttp.getSize();
     if (contentLength <= 0) {
         Serial.println("Error: Invalid content length for firmware file");
-        if (currentInstance)
+        if (currentInstance) {
             currentInstance->updateBoardStatus("failed");
+            // Reset the OTA progress flag
+            preferences.begin("iotnet", false);
+            preferences.putBool("otaInProgress", false);
+            preferences.end();
+        }
         updateHttp.end();
+        updateClient.stop();
         delete otaInfo;
         vTaskDelete(NULL);
         return;
@@ -596,9 +609,15 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
 
     if (!Update.begin(contentLength, U_FLASH, -1, LOW)) {
         Serial.println("Not enough space to begin OTA update");
-        if (currentInstance)
+        if (currentInstance) {
             currentInstance->updateBoardStatus("failed");
+            // Reset the OTA progress flag
+            preferences.begin("iotnet", false);
+            preferences.putBool("otaInProgress", false);
+            preferences.end();
+        }
         updateHttp.end();
+        updateClient.stop();
         delete otaInfo;
         vTaskDelete(NULL);
         return;
@@ -612,11 +631,8 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
 
     const unsigned long timeout = 10000;
     unsigned long lastData = millis();
-    unsigned long lastAnimation = 0;
+    unsigned long lastProgressUpdate = 0;
     int lastProgressPercent = 0;
-    const char animationChars[] = {'|', '/', '-', '\\'};
-    uint8_t animIdx = 0;
-    const int progressBarWidth = 50;
 
     while (updateHttp.connected() && (written < contentLength)) {
         size_t available = stream->available();
@@ -631,6 +647,7 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
                     if (currentInstance)
                         currentInstance->updateBoardStatus("failed");
                     updateHttp.end();
+                    updateClient.stop();
                     Update.abort();
                     delete otaInfo;
 
@@ -642,36 +659,19 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
 
                 written += readBytes;
 
-                if (millis() - lastAnimation >= 200) {
+                if (millis() - lastProgressUpdate >= 1000) {
                     int progressPercent = (written * 100) / contentLength;
-                    int progressChars = (written * progressBarWidth) / contentLength;
 
                     if (progressPercent != lastProgressPercent) {
-                        Serial.print("[");
-                        for (int i = 0; i < progressBarWidth; i++) {
-                            if (i < progressChars) {
-                                Serial.print("=");
-                            } else if (i == progressChars) {
-                                Serial.print(">");
-                            } else {
-                                Serial.print(" ");
-                            }
-                        }
-                        Serial.printf("] %3d%% %c\r", progressPercent, animationChars[animIdx]);
-
+                        Serial.printf("OTA Progress: %d%%\n", progressPercent);
                         lastProgressPercent = progressPercent;
-                        animIdx = (animIdx + 1) % 4;
-                        lastAnimation = millis();
-                    }
-
-                    if (written % 10240 == 0) {
-                        esp_task_wdt_reset();
+                        lastProgressUpdate = millis();
                     }
                 }
             }
         } else {
             if (millis() - lastData > timeout) {
-                Serial.println("\nData transfer timeout");
+                Serial.println("Data transfer timeout");
                 break;
             }
             delay(10);
@@ -685,9 +685,15 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
 
     if (written != contentLength) {
         Serial.println("\nError: Downloaded size doesn't match expected size");
-        if (currentInstance)
+        if (currentInstance) {
             currentInstance->updateBoardStatus("failed");
+            // Reset the OTA progress flag
+            preferences.begin("iotnet", false);
+            preferences.putBool("otaInProgress", false);
+            preferences.end();
+        }
         Update.abort();
+        updateClient.stop();
         delete otaInfo;
         vTaskDelete(NULL);
         return;
@@ -695,8 +701,13 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
 
     if (!Update.end(true)) {
         Serial.printf("\nError finalizing update: %s\n", Update.errorString());
-        if (currentInstance)
+        if (currentInstance) {
             currentInstance->updateBoardStatus("failed");
+            preferences.begin("iotnet", false);
+            preferences.putBool("otaInProgress", false);
+            preferences.end();
+        }
+        updateClient.stop();
         delete otaInfo;
         vTaskDelete(NULL);
         return;
@@ -713,22 +724,35 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
     Serial.printf("Freed %d bytes of memory\n", afterClean - beforeClean);
     heap_caps_check_integrity_all(true);
 
-    WiFi.getSleep();
+    if (currentInstance) {
+        currentInstance->updateBoardStatus("success");
+        delay(500);
+    }
+
     updateClient.stop();
     updateClient.flush();
     delay(100);
 
-    if (currentInstance)
-        currentInstance->updateBoardStatus("success");
     Serial.println("\nFirmware download completed");
     Serial.println("OTA update completed successfully! Rebooting...");
 
     preferences.begin("iotnet", false);
     preferences.putBool("justUpdated", true);
+    preferences.putBool("otaInProgress", false);
     preferences.end();
+
+    delete otaInfo; // Free the allocated memory before restart
 
     delay(1000);
     ESP.restart();
+}
+
+//=======================================================================================
+// Memory Utilities Methods
+//=======================================================================================
+
+size_t IotNetESP32::getFreeHeap() {
+    return ESP.getFreeHeap();
 }
 
 void IotNetESP32::updateBoardStatus(const char *status) {
@@ -738,42 +762,25 @@ void IotNetESP32::updateBoardStatus(const char *status) {
         return;
     }
 
-    HTTPClient http;
-    WiFiClientSecure client;
+    char topic[120];
+    snprintf(topic, sizeof(topic), "/device/%s/%s/status", credentials.mqttUsername,
+             credentials.boardName);
 
-    client.setCACert(var_4);
+    char payload[256];
+    snprintf(payload, sizeof(payload), "{\"version\":\"%s\",\"status\":\"%s\"}",
+             currentFirmwareVersion, status);
 
-    char url[256];
-    snprintf(url, sizeof(url), "%s/keys/%s/board", var_3, IOTNET_USERNAME);
-
-    char requestBody[512];
-    snprintf(requestBody, sizeof(requestBody),
-             "{\"version\":\"%s\",\"board_identifier\":\"%s\",\"status\":\"%s\"}",
-             currentFirmwareVersion, IOTNET_BOARD_NAME, status);
-
-    if (!http.begin(client, url)) {
-        Serial.println("Failed to begin HTTP request");
+    if (!mqttClient.connected()) {
+        Serial.println("Cannot publish board status: MQTT not connected");
         return;
     }
 
-    char authHeader[100];
-    snprintf(authHeader, sizeof(authHeader), "Bearer %s", IOTNET_PASSWORD);
-    http.addHeader("Content-Type", "application/json");
-    http.addHeader("Authorization", authHeader);
-
-    int httpResponseCode = http.PATCH(requestBody);
-
-    if (httpResponseCode != HTTP_CODE_OK) {
-        String payload = http.getString();
-        JsonDocument doc;
-        DeserializationError error = deserializeJson(doc, payload);
-        if (!error && doc["message"].is<const char *>()) {
-            Serial.println(doc["message"].as<String>());
-        } else {
-            Serial.printf("Error on HTTP request, code: %d\n", httpResponseCode);
-        }
+    bool success = mqttClient.publish(topic, payload);
+    if (!success) {
+        Serial.printf("Failed to publish board status to topic: %s\n", topic);
+    } else {
+        Serial.printf("Update Status: %s\n", status);
     }
-    http.end();
 }
 
 void IotNetESP32::registerBoard() {
@@ -782,41 +789,22 @@ void IotNetESP32::registerBoard() {
         return;
     }
 
-    HTTPClient http;
-    WiFiClientSecure client;
+    char topic[120];
+    snprintf(topic, sizeof(topic), "/device/%s/%s/board", credentials.mqttUsername,
+             credentials.boardName);
 
-    client.setCACert(var_4);
+    char payload[256];
+    snprintf(payload, sizeof(payload), "{\"version\":\"%s\"}", currentFirmwareVersion);
 
-    char url[256];
-    snprintf(url, sizeof(url), "%s/keys/%s/board", var_3, IOTNET_USERNAME);
-
-    char requestBody[512];
-    snprintf(requestBody, sizeof(requestBody), "{\"version\":\"%s\",\"board_identifier\":\"%s\"}",
-             currentFirmwareVersion, IOTNET_BOARD_NAME);
-
-    if (!http.begin(client, url)) {
-        Serial.println("Failed to begin HTTP request");
+    if (!mqttClient.connected()) {
+        Serial.println("Cannot register board: MQTT not connected");
         return;
     }
 
-    char authHeader[100];
-    snprintf(authHeader, sizeof(authHeader), "Bearer %s", IOTNET_PASSWORD);
-    http.addHeader("Content-Type", "application/json");
-    http.addHeader("Authorization", authHeader);
-
-    int httpResponseCode = http.POST(requestBody);
-
-    if (httpResponseCode != HTTP_CODE_CREATED) {
-        String payload = http.getString();
-        JsonDocument doc;
-        DeserializationError error = deserializeJson(doc, payload);
-        if (!error && doc["message"].is<const char *>()) {
-            Serial.println(doc["message"].as<String>());
-        } else {
-            Serial.printf("Error on HTTP request, code: %d\n", httpResponseCode);
-        }
+    bool success = mqttClient.publish(topic, payload);
+    if (!success) {
+        Serial.printf("Failed to publish board registration to topic: %s\n", topic);
     }
-    http.end();
 }
 
 //=======================================================================================

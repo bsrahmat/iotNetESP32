@@ -10,19 +10,16 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <esp_heap_caps.h>
-#include <esp_task_wdt.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
 class IotNetESP32 {
-    public:
-    // Constants
+  public:
     static constexpr int MAX_PINS = 50;
     static constexpr unsigned long RECONNECT_DELAY_MS = 5000;
     static constexpr unsigned long WIFI_TIMEOUT_MS = 30000;
     static constexpr unsigned long MQTT_TIMEOUT_MS = 60000;
 
-    // Public Structures
     struct PinState {
         char topic[120];
         char value[32];
@@ -41,31 +38,25 @@ class IotNetESP32 {
         uint32_t nonce;
     };
 
-    // Constructor
     IotNetESP32();
 
-    // Initialization and Connection Methods
-    void begin(const char *wifiSsid, const char *wifiPassword);
+    void run();
+    void begin();
     void connect();
     void version(const char *version);
+    const char *version() const;
     void setStatusPin(int pin);
+    void setMQTTServer();
 
-    // Runtime and Operation Methods
-    void run();
     bool shouldUpdate(unsigned long &lastUpdate, unsigned long interval);
     bool hasNewValue(const char *pin);
     void registerCallback(const char *pin, void (*callback)(String));
 
-    // Data Access Template Methods
     template <typename T> bool virtualWrite(const char *pin, T value);
-
     template <typename T> T virtualRead(const char *pin);
 
-    private:
-    // Private Structures
+  private:
     struct NetworkCredentials {
-        const char *wifiSsid;
-        const char *wifiPassword;
         const char *mqttUsername;
         const char *mqttPassword;
         const char *boardName;
@@ -83,7 +74,6 @@ class IotNetESP32 {
         const char *clientKey;
     };
 
-    // Private Member Variables
     WiFiClientSecure espClient;
     PubSubClient mqttClient;
 
@@ -96,42 +86,32 @@ class IotNetESP32 {
     PinCallback callbacks[MAX_PINS];
     int numCallbacks;
 
-    // Initialization Methods
     void setMQTTCredentials(const char *username, const char *password);
     void setCertificates();
-    void setMQTTServer();
     void setupCertificates();
-    void setupWiFi(const char *ssid, const char *password);
 
-    // Connection Methods
     void checkConnections();
     bool reconnectMQTT();
     void printLogo();
 
-    // Pin Management Methods
     int convertPinToIndex(const char *pin);
     void initPinTopic(int pin);
 
-    // MQTT Communication Methods
     static void staticMqttCallback(char *topic, byte *payload, unsigned int length);
     void mqttCallback(char *topic, byte *payload, unsigned int length);
 
-    // OTA Update Methods
     void processOtaUpdate(const char *otaMessage);
     static void otaUpdateTask(void *parameters);
     void subscribeToOtaUpdates();
     void updateBoardStatus(const char *status);
     void registerBoard();
 
-    // Template Methods for Data Conversion
+    size_t getFreeHeap();
+
     template <typename T> bool publishToPin(const char *pin, T value);
-
     template <typename T> const char *toString(T value, char *buffer, size_t bufferSize);
-
     template <typename T> T fromString(const String &str);
 };
-
-// Template Specializations for Type Conversion
 
 // toString specializations
 template <> const char *IotNetESP32::toString<float>(float value, char *buffer, size_t bufferSize);
