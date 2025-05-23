@@ -1,11 +1,11 @@
 {
-    "name": "IotNetESP32",
+    "name": "iotNetESP32",
     "version": "1.1.1",
     "description": "A library for ESP32 providing WiFi, MQTT, and HTTP client functionality for IoT applications.",
     "keywords": "esp32, wifi, mqtt, http, iot",
     "repository": {
         "type": "git",
-        "url": "https://github.com/bsrahmat/IotNetESP32"
+        "url": "https://github.com/bsrahmat/iotNetESP32"
     },
     "authors": [
         {
@@ -25,5 +25,5 @@
         "knolleary/PubSubClient": ">=2.8"
     },
     "headers": "IotNetESP32.h",
-    "homepage": "https://github.com/bsrahmat/IotNetESP32"
+    "homepage": "https://i-ot.net"
 }

@@ -3,7 +3,6 @@
   "version": "1.1.1",
   "description": "IoT Network Arduino Project",
   "scripts": {
-    "lint": "find ./src ./include ./lib -type f \\( -name \"*.cpp\" -o -name \"*.h\" \\) ! -name \"i-ot.net.cpp\" -exec echo \"Formatting {}\" \\; -exec clang-format -i {} \\; 2>/dev/null || echo \"Some directories may not exist, but available files were formatted\"",
-    "lint:check": "find ./src ./include ./lib -type f \\( -name \"*.cpp\" -o -name \"*.h\" \\) ! -name \"i-ot.net.cpp\" -exec clang-format --dry-run -Werror {} \\; 2>/dev/null || echo \"Some directories may not exist, but available files were checked\""
+    "lint": "find . \\( -path './src/*' -o -path './include/*' -o -path './lib/*' \\) -type f \\( -name '*.cpp' -o -name '*.h' \\) -not -name 'i-ot.net.cpp' -exec clang-format -i {} +"
   }
 }
