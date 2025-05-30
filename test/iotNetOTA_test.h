@@ -102,6 +102,14 @@ class IotNetESP32 {
     // Time synchronization variables
     char timeZone[64];
     bool timeConfigured;
+    
+    // Resource monitoring variables
+    size_t initialHeapSize;
+    size_t minHeapDuringOta;
+    UBaseType_t minStackRemaining;
+    float maxCpuUsage;
+    unsigned long lastCpuCheckTime;
+    unsigned long totalCpuTimeUsed;
 
     PinState pins[MAX_PINS];
     PinCallback callbacks[MAX_PINS];
@@ -128,6 +136,12 @@ class IotNetESP32 {
     void registerBoard();
 
     size_t getFreeHeap();
+    void startResourceMonitoring();
+    void updateResourceMonitoring();
+    void stopResourceMonitoring();
+    void reportResourceUsage();
+    UBaseType_t getCurrentTaskStackRemaining();
+    float getCpuUsage();
 
     template <typename T> bool publishToPin(const char *pin, T value);
     template <typename T> const char *toString(T value, char *buffer, size_t bufferSize);

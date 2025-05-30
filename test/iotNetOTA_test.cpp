@@ -15,7 +15,9 @@ extern const char *IOTNET_BOARD_NAME;
 IotNetESP32::IotNetESP32()
     : mqttClient(espClient), credentials{nullptr, nullptr, nullptr}, mqttConfig{nullptr, 0, 0},
       certificates{nullptr, nullptr, nullptr}, numCallbacks(0), startTimestamp(0),
-      endTimestamp(0), timingActive(false), timeConfigured(false) {
+      endTimestamp(0), timingActive(false), timeConfigured(false),
+      initialHeapSize(0), minHeapDuringOta(0), minStackRemaining(0),
+      maxCpuUsage(0), lastCpuCheckTime(0), totalCpuTimeUsed(0) {
     currentInstance = this;
     strcpy(currentFirmwareVersion, "1.0.0");
     strcpy(timeZone, "UTC");
@@ -574,8 +576,10 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
     client.stop();
 
     Serial.println("Starting OTA firmware update...");
-    if (currentInstance)
+    if (currentInstance) {
         currentInstance->updateBoardStatus("active");
+        currentInstance->startResourceMonitoring();
+    }
 
     Serial.print(F("Free memory before OTA: "));
     Serial.print(ESP.getFreeHeap());
@@ -710,6 +714,11 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
                         Serial.printf("OTA Progress: %d%%\n", progressPercent);
                         lastProgressPercent = progressPercent;
                         lastProgressUpdate = millis();
+                        
+                        // Update resource monitoring during download
+                        if (currentInstance) {
+                            currentInstance->updateResourceMonitoring();
+                        }
                     }
                 }
             }
@@ -790,6 +799,11 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
     uint32_t afterClean = ESP.getFreeHeap();
     Serial.printf("Freed %d bytes of memory\n", afterClean - beforeClean);
     heap_caps_check_integrity_all(true);
+    
+    // Final resource usage report
+    if (currentInstance) {
+        currentInstance->stopResourceMonitoring();
+    }
 
     updateClient.stop();
     updateClient.flush();
@@ -816,6 +830,180 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
 
 size_t IotNetESP32::getFreeHeap() {
     return ESP.getFreeHeap();
+}
+
+void IotNetESP32::startResourceMonitoring() {
+    // Record initial heap size
+    initialHeapSize = ESP.getFreeHeap();
+    minHeapDuringOta = initialHeapSize;
+    
+    // Initialize stack monitoring
+    minStackRemaining = uxTaskGetStackHighWaterMark(NULL);
+    
+    // Initialize CPU monitoring
+    maxCpuUsage = 0.0;
+    totalCpuTimeUsed = 0;
+    lastCpuCheckTime = millis();
+    
+    // Ensure time tracking is enabled if not already set by updateBoardStatus("pending")
+    if (!timingActive) {
+        startTimestamp = millis();
+        timingActive = true;
+        Serial.println("Starting execution time measurement");
+    }
+    
+    Serial.printf("Resource monitoring started - Initial heap: %u bytes, Initial stack remaining: %u\n", 
+                  initialHeapSize, minStackRemaining);
+}
+
+void IotNetESP32::updateResourceMonitoring() {
+    // Update heap monitoring
+    size_t currentHeap = ESP.getFreeHeap();
+    if (currentHeap < minHeapDuringOta) {
+        minHeapDuringOta = currentHeap;
+    }
+    
+    // Update stack monitoring
+    UBaseType_t currentStackRemaining = uxTaskGetStackHighWaterMark(NULL);
+    if (currentStackRemaining < minStackRemaining) {
+        minStackRemaining = currentStackRemaining;
+    }
+    
+    // Update CPU monitoring (simplified approach)
+    float currentCpuUsage = getCpuUsage();
+    if (currentCpuUsage > maxCpuUsage) {
+        maxCpuUsage = currentCpuUsage;
+    }
+    
+    // Periodic reporting during update
+    static unsigned long lastReportTime = 0;
+    if (millis() - lastReportTime > 5000) {  // Report every 5 seconds
+        Serial.printf("Resource usage - Heap: %u bytes (%.1f%% used), Stack remaining: %u, CPU: %.1f%%\n",
+                     currentHeap,
+                     100.0 * (1.0 - ((float)currentHeap / initialHeapSize)),
+                     currentStackRemaining,
+                     currentCpuUsage);
+        lastReportTime = millis();
+    }
+}
+
+void IotNetESP32::stopResourceMonitoring() {
+    // If timing is still active, record the end timestamp
+    if (timingActive && startTimestamp > 0) {
+        endTimestamp = millis();
+        timingActive = false;
+        Serial.println("Stopping execution time measurement");
+    }
+    
+    reportResourceUsage();
+}
+
+void IotNetESP32::reportResourceUsage() {
+    size_t finalHeap = ESP.getFreeHeap();
+    size_t heapUsed = (initialHeapSize > finalHeap) ? (initialHeapSize - finalHeap) : 0;
+    float heapUsagePercent = (initialHeapSize > 0) ? (100.0 * heapUsed / initialHeapSize) : 0.0;
+    
+    Serial.println("\n--- OTA Update Resource Usage Report ---");
+    Serial.printf("Heap usage: Initial %u bytes, Minimum %u bytes, Final %u bytes\n", 
+                  initialHeapSize, minHeapDuringOta, finalHeap);
+    Serial.printf("Maximum heap usage: %u bytes (%.1f%%)\n", 
+                  heapUsed, heapUsagePercent);
+    Serial.printf("Minimum stack remaining: %u bytes\n", minStackRemaining);
+    Serial.printf("Maximum CPU usage: %.1f%%\n", maxCpuUsage);
+    
+    // Calculate and include total execution time in the report
+    unsigned long totalTime = 0;
+    String executionTimeStr;
+    
+    if (endTimestamp > 0 && startTimestamp > 0) {
+        totalTime = endTimestamp - startTimestamp;
+        executionTimeStr = getFormattedExecutionTime();
+    } else if (timingActive && startTimestamp > 0) {
+        totalTime = millis() - startTimestamp;
+        
+        // Format the time manually since getFormattedExecutionTime() might not work during active timing
+        unsigned long hours = totalTime / 3600000;
+        unsigned long minutes = (totalTime % 3600000) / 60000;
+        unsigned long seconds = (totalTime % 60000) / 1000;
+        unsigned long milliseconds = totalTime % 1000;
+        
+        executionTimeStr = "";
+        if (hours > 0) {
+            executionTimeStr += String(hours) + "h ";
+        }
+        if (minutes > 0 || hours > 0) {
+            executionTimeStr += String(minutes) + "m ";
+        }
+        if (seconds > 0 || minutes > 0 || hours > 0) {
+            executionTimeStr += String(seconds) + "s ";
+        }
+        executionTimeStr += String(milliseconds) + "ms";
+    }
+    
+    if (totalTime > 0) {
+        Serial.printf("Total update execution time: %s (from 'pending' to now)\n", executionTimeStr.c_str());
+        
+        // Calculate and display average data rates
+        if (initialHeapSize > 0) {
+            float bytesPerSec = (float)heapUsed / (totalTime / 1000.0f);
+            Serial.printf("Average memory allocation rate: %.2f bytes/sec\n", bytesPerSec);
+        }
+    }
+    
+    Serial.println("-------------------------------------");
+}
+
+UBaseType_t IotNetESP32::getCurrentTaskStackRemaining() {
+    return uxTaskGetStackHighWaterMark(NULL);
+}
+
+float IotNetESP32::getCpuUsage() {
+    // Improved CPU usage calculation for ESP32
+    static unsigned long lastTotalTime = 0;
+    static unsigned long lastIdleTime = 0;
+    
+    unsigned long now = millis();
+    unsigned long timeDelta = now - lastCpuCheckTime;
+    
+    if (timeDelta < 100) { // Only sample every 100ms for stability
+        return maxCpuUsage;
+    }
+    
+    // Get current total and idle times
+    unsigned long totalTime = esp_timer_get_time() / 1000; // convert to ms
+    unsigned long idleTime = 0;
+    
+    #ifdef CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS
+        // If FreeRTOS runtime stats are enabled, we can get idle task time
+        idleTime = ulTaskGetRunTimeCounter(xTaskGetIdleTaskHandle()) / 1000; // convert to ms
+    #else
+        // Fallback method: estimate idle time from memory allocations and operations
+        // This is not accurate but gives some indication
+        idleTime = (ESP.getMaxAllocHeap() > 10000) ? totalTime / 4 : totalTime / 10;
+    #endif
+    
+    // Calculate CPU usage
+    float usage = 0.0;
+    if (lastTotalTime > 0 && totalTime > lastTotalTime) {
+        unsigned long totalDelta = totalTime - lastTotalTime;
+        unsigned long idleDelta = (idleTime > lastIdleTime) ? (idleTime - lastIdleTime) : 0;
+        
+        // Calculate percentage of non-idle time
+        if (totalDelta > 0) {
+            usage = 100.0f * (1.0f - (float)idleDelta / (float)totalDelta);
+        }
+    }
+    
+    // Update last measurements
+    lastTotalTime = totalTime;
+    lastIdleTime = idleTime;
+    lastCpuCheckTime = now;
+    
+    // Bound to reasonable values (0-100%)
+    if (usage < 0.0f) usage = 0.0f;
+    if (usage > 100.0f) usage = 100.0f;
+    
+    return usage;
 }
 
 void IotNetESP32::updateBoardStatus(const char *status) {
@@ -908,12 +1096,13 @@ void IotNetESP32::updateBoardStatus(const char *status) {
         if (strcmp(status, "failed") == 0) {
             this->preferences.begin("iotnet", false);
             this->preferences.putBool("pubFailed", true);
-            this->preferences.putBool("justUpdated", false);
+            this->preferences.putBool("justUpdated", false); // Make sure justUpdated is false for a failed update
             this->preferences.end();
             Serial.printf("Saved failed status for version %s to preferences for next boot\n", versionToLog);
         } else if (strcmp(status, "success") == 0) {
             this->preferences.begin("iotnet", false);
-            this->preferences.putBool("pubFailed", false); 
+            this->preferences.putBool("pubFailed", false);  // Ensure failed flag is cleared on success
+            // Note: justUpdated is handled separately when OTA completes
             this->preferences.end();
             Serial.printf("Saved success status for version %s\n", versionToLog);
         }
