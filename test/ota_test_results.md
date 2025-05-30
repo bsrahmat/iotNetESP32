@@ -13,7 +13,7 @@ This document contains the results of OTA (Over-The-Air) firmware update testing
 
 ## Test Results
 
-### Pengujian Pertama: Version 1.0.0 → 1.0.1
+### 1st Test: Version 1.0.0 → 1.0.1
 
 ```
 Firmware version: 1.0.0
@@ -39,7 +39,7 @@ Firmware size: 974576 bytes
 
 ---
 
-### Pengujian Kedua: Version 1.0.1 → 1.0.2
+### 2nd Test: Version 1.0.1 → 1.0.2
 
 ```
 Firmware version: 1.0.1
@@ -66,7 +66,7 @@ Firmware size: 974576 bytes
 
 ---
 
-### Pengujian Ketiga: Version 1.0.2 → 1.0.3
+### 3rd Test: Version 1.0.2 → 1.0.3
 
 ```
 Firmware version: 1.0.2
@@ -93,7 +93,7 @@ Firmware size: 974576 bytes
 
 ---
 
-### Pengujian Keempat: Version 1.0.3 → 1.0.4
+### 4th Test: Version 1.0.3 → 1.0.4
 
 ```
 Firmware version: 1.0.3
@@ -120,7 +120,7 @@ Firmware size: 974576 bytes
 
 ---
 
-### Pengujian Kelima: Version 1.0.4 → 1.0.5
+### 5th Test: Version 1.0.4 → 1.0.5
 
 ```
 Firmware version: 1.0.4
@@ -147,7 +147,7 @@ Firmware size: 974576 bytes
 
 ---
 
-### Percobaan Keenam: Version 1.0.5 → 1.0.6
+### 6th Test: Version 1.0.5 → 1.0.6
 
 ```
 Firmware version: 1.0.5
@@ -174,7 +174,7 @@ Firmware size: 974576 bytes
 
 ---
 
-### Percobaan Ketujuh: Version 1.0.6 → 1.0.7
+### 7th Test: Version 1.0.6 → 1.0.7
 
 ```
 Firmware version: 1.0.6
@@ -201,7 +201,7 @@ Firmware size: 974576 bytes
 
 ---
 
-### Percobaan Kedelapan: Version 1.0.7 → 1.0.8
+### 8th Test: Version 1.0.7 → 1.0.8
 
 ```
 Firmware version: 1.0.7
@@ -228,7 +228,7 @@ Firmware size: 974576 bytes
 
 ---
 
-### Percobaan Kesembilan: Version 1.0.8 → 1.0.9
+### 9th Test: Version 1.0.8 → 1.0.9
 
 ```
 Firmware version: 1.0.8
@@ -255,7 +255,7 @@ Firmware size: 974576 bytes
 
 ---
 
-### Percobaan Kesepuluh: Version 1.0.9 → 1.0.10
+### 10th Test: Version 1.0.9 → 1.0.10
 
 ```
 Firmware version: 1.0.9
