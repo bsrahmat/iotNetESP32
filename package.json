@@ -1,6 +1,6 @@
 {
   "name": "iotnet-arduino",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "description": "IoT Network Arduino Project",
   "scripts": {
     "lint": "find . \\( -path './src/*' -o -path './include/*' -o -path './lib/*' \\) -type f \\( -name '*.cpp' -o -name '*.h' \\) -not -name 'i-ot.net.cpp' -exec clang-format -i {} +"

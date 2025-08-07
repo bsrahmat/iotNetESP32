@@ -1,29 +1,29 @@
 {
-    "name": "iotNetESP32",
-    "version": "1.1.2",
-    "description": "A library for ESP32 providing WiFi, MQTT, and HTTP client functionality for IoT applications.",
-    "keywords": "esp32, wifi, mqtt, http, iot",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/bsrahmat/iotNetESP32"
+  "name": "iotNetESP32",
+  "version": "1.1.3",
+  "description": "A library for ESP32 providing WiFi, MQTT, and HTTP client functionality for IoT applications.",
+  "keywords": "esp32, wifi, mqtt, http, iot",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bsrahmat/iotNetESP32"
+  },
+  "authors": [
+    {
+      "name": "bsrahmat",
+      "maintainer": false
     },
-    "authors": [
-        {
-            "name": "bsrahmat",
-            "maintainer": false
-        },
-        {
-            "name": "farismnrr", 
-            "maintainer": true
-        }
-    ],
-    "license": "MIT",
-    "frameworks": "arduino",
-    "platforms": "espressif32",
-    "dependencies": {
-        "bblanchon/ArduinoJson": ">=7.2.0",
-        "knolleary/PubSubClient": ">=2.8"
-    },
-    "headers": "iotNetESP32.h",
-    "homepage": "https://i-ot.net"
+    {
+      "name": "farismnrr",
+      "maintainer": true
+    }
+  ],
+  "license": "MIT",
+  "frameworks": "arduino",
+  "platforms": "espressif32",
+  "dependencies": {
+    "bblanchon/ArduinoJson": ">=7.2.0",
+    "knolleary/PubSubClient": ">=2.8"
+  },
+  "headers": "iotNetESP32.h",
+  "homepage": "https://i-ot.net"
 }
