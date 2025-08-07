@@ -2,8 +2,6 @@
 #include "i-ot.net.h"
 
 static IotNetESP32 *currentInstance = nullptr;
-extern const char *CLIENT_CERT;
-extern const char *CLIENT_KEY;
 extern const char *IOTNET_USERNAME;
 extern const char *IOTNET_PASSWORD;
 extern const char *IOTNET_BOARD_NAME;
@@ -14,8 +12,8 @@ extern const char *IOTNET_BOARD_NAME;
 
 IotNetESP32::IotNetESP32()
     : mqttClient(espClient), credentials{nullptr, nullptr, nullptr}, mqttConfig{nullptr, 0, 0},
-      certificates{nullptr, nullptr, nullptr}, numCallbacks(0), startTimestamp(0),
-      endTimestamp(0), timingActive(false), timeConfigured(false) {
+      certificates{nullptr}, numCallbacks(0), startTimestamp(0), endTimestamp(0),
+      timingActive(false), timeConfigured(false) {
     currentInstance = this;
     strcpy(currentFirmwareVersion, "1.0.0");
     strcpy(timeZone, "UTC");
@@ -41,7 +39,7 @@ void IotNetESP32::begin() {
     bool otaInProgress = this->preferences.getBool("otaInProgress", false);
     bool justUpdated = this->preferences.getBool("justUpdated", false);
     bool pubFailed = this->preferences.getBool("pubFailed", false);
-    
+
     if (otaInProgress && !justUpdated) {
         Serial.println("Detected interrupted OTA update");
         String targetVersion = this->preferences.getString("targetVer", "");
@@ -52,13 +50,13 @@ void IotNetESP32::begin() {
             Serial.println("Warning: No target version found for interrupted OTA update");
         }
         this->preferences.putBool("otaInProgress", false);
-        this->preferences.putBool("pubFailed", true); 
-    } 
+        this->preferences.putBool("pubFailed", true);
+    }
 
     if (justUpdated) {
         this->preferences.putBool("pubFailed", false);
         this->preferences.putBool("otaInProgress", false);
-        
+
         String newVersion = this->preferences.getString("targetVer", "");
         if (newVersion.length() > 0) {
             strncpy(currentFirmwareVersion, newVersion.c_str(), sizeof(currentFirmwareVersion) - 1);
@@ -82,7 +80,7 @@ void IotNetESP32::connect() {
     justUpdated = this->preferences.getBool("justUpdated", false);
     otaInterrupted = this->preferences.getBool("otaInProgress", false);
     bool pubFailed = this->preferences.getBool("pubFailed", false);
-    
+
     if (justUpdated) {
         String newVersion = this->preferences.getString("targetVer", "");
         if (newVersion.length() > 0) {
@@ -94,7 +92,7 @@ void IotNetESP32::connect() {
     if (otaInterrupted) {
         this->preferences.putBool("otaInProgress", false);
     }
-    
+
     printLogo();
     this->preferences.end();
 
@@ -121,19 +119,19 @@ void IotNetESP32::connect() {
         this->preferences.putBool("justUpdated", false);
         updateBoardStatus("success");
         publishToPin("V0", "online");
-    }
-    else if (needPublishFailed) {
+    } else if (needPublishFailed) {
         String targetVersion = this->preferences.getString("targetVer", "");
         if (targetVersion.length() > 0) {
-            Serial.printf("Reporting previous OTA update failure for version %s\n", targetVersion.c_str());
+            Serial.printf("Reporting previous OTA update failure for version %s\n",
+                          targetVersion.c_str());
         } else {
             Serial.println("Reporting previous OTA update failure (version unknown)");
         }
-        
+
         updateBoardStatus("failed");
         this->preferences.putBool("pubFailed", false);
     }
-    
+
     this->preferences.end();
 
     if (otaInterrupted && !justUpdated) {
@@ -143,8 +141,6 @@ void IotNetESP32::connect() {
 }
 
 void IotNetESP32::setCertificates() {
-    this->certificates.clientCert = CLIENT_CERT;
-    this->certificates.clientKey = CLIENT_KEY;
     this->certificates.caCert = var_6;
 }
 
@@ -164,17 +160,13 @@ void IotNetESP32::setMQTTServer() {
 }
 
 void IotNetESP32::setupCertificates() {
-    if (!certificates.caCert && !certificates.clientCert && !certificates.clientKey) {
-        Serial.println("Warning: One or more certificates are not set");
+    if (!certificates.caCert) {
+        Serial.println("Warning: CA certificate is not set");
         return;
     }
 
     if (certificates.caCert)
         espClient.setCACert(certificates.caCert);
-    if (certificates.clientCert)
-        espClient.setCertificate(certificates.clientCert);
-    if (certificates.clientKey)
-        espClient.setPrivateKey(certificates.clientKey);
 }
 
 void IotNetESP32::version(const char *version) {
@@ -506,15 +498,16 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
     if (!http.begin(client, url)) {
         Serial.println("Failed to begin HTTP request");
         if (currentInstance) {
-            Serial.printf("OTA update failed for version %s: Failed to begin HTTP request\n", otaInfo->version);
+            Serial.printf("OTA update failed for version %s: Failed to begin HTTP request\n",
+                          otaInfo->version);
             currentInstance->updateBoardStatus("failed");
         }
         client.stop();
         delete otaInfo;
-        
+
         delay(1000);
         ESP.restart();
-        
+
         vTaskDelete(NULL);
         return;
     }
@@ -529,16 +522,17 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
     if (httpResponseCode <= 0) {
         Serial.printf("Error on HTTP request, code: %d\n", httpResponseCode);
         if (currentInstance) {
-            Serial.printf("OTA update failed for version %s: HTTP error code %d\n", otaInfo->version, httpResponseCode);
+            Serial.printf("OTA update failed for version %s: HTTP error code %d\n",
+                          otaInfo->version, httpResponseCode);
             currentInstance->updateBoardStatus("failed");
         }
         http.end();
         client.stop();
         delete otaInfo;
-        
+
         delay(1000);
         ESP.restart();
-        
+
         vTaskDelete(NULL);
         return;
     }
@@ -561,10 +555,10 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
         http.end();
         client.stop();
         delete otaInfo;
-        
+
         delay(1000);
         ESP.restart();
-        
+
         vTaskDelete(NULL);
         return;
     }
@@ -616,10 +610,10 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
         updateHttp.end();
         updateClient.stop();
         delete otaInfo;
-        
+
         delay(1000);
         ESP.restart();
-        
+
         vTaskDelete(NULL);
         return;
     }
@@ -636,10 +630,10 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
         updateHttp.end();
         updateClient.stop();
         delete otaInfo;
-        
+
         delay(1000);
         ESP.restart();
-        
+
         vTaskDelete(NULL);
         return;
     }
@@ -657,10 +651,10 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
         updateHttp.end();
         updateClient.stop();
         delete otaInfo;
-        
+
         delay(1000);
         ESP.restart();
-        
+
         vTaskDelete(NULL);
         return;
     }
@@ -716,21 +710,21 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
         } else {
             if (millis() - lastData > timeout) {
                 Serial.println("Data transfer timeout");
-                
+
                 if (currentInstance) {
                     currentInstance->updateBoardStatus("failed");
                     currentInstance->preferences.begin("iotnet", false);
                     currentInstance->preferences.putBool("otaInProgress", false);
                     currentInstance->preferences.end();
                 }
-                
+
                 Update.abort();
                 updateClient.stop();
                 delete otaInfo;
                 memset(buff, 0, sizeof(buff));
                 delay(1000);
                 ESP.restart();
-                
+
                 vTaskDelete(NULL);
                 return;
             }
@@ -754,10 +748,10 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
         Update.abort();
         updateClient.stop();
         delete otaInfo;
-        
+
         delay(1000);
         ESP.restart();
-        
+
         vTaskDelete(NULL);
         return;
     }
@@ -772,10 +766,10 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
         }
         updateClient.stop();
         delete otaInfo;
-        
+
         delay(1000);
         ESP.restart();
-        
+
         vTaskDelete(NULL);
         return;
     }
@@ -804,7 +798,7 @@ void IotNetESP32::otaUpdateTask(void *parameters) {
     currentInstance->preferences.putBool("pubFailed", false);
     currentInstance->preferences.end();
 
-    delete otaInfo; 
+    delete otaInfo;
 
     delay(1000);
     ESP.restart();
@@ -821,7 +815,8 @@ size_t IotNetESP32::getFreeHeap() {
 void IotNetESP32::updateBoardStatus(const char *status) {
     if (!status || !credentials.mqttUsername || !credentials.boardName ||
         !credentials.mqttPassword) {
-        Serial.printf("Error: Missing parameters for updateBoardStatus (Current version: %s)\n", currentFirmwareVersion);
+        Serial.printf("Error: Missing parameters for updateBoardStatus (Current version: %s)\n",
+                      currentFirmwareVersion);
         return;
     }
 
@@ -840,32 +835,33 @@ void IotNetESP32::updateBoardStatus(const char *status) {
              credentials.boardName);
 
     char payload[256];
-    
-    if (strcmp(status, "failed") == 0 || strcmp(status, "pending") == 0 || 
+
+    if (strcmp(status, "failed") == 0 || strcmp(status, "pending") == 0 ||
         strcmp(status, "active") == 0 || strcmp(status, "success") == 0) {
         this->preferences.begin("iotnet", false);
         String targetVersion = this->preferences.getString("targetVer", "");
         this->preferences.end();
-        
+
         if (targetVersion.length() > 0) {
             snprintf(payload, sizeof(payload), "{\"version\":\"%s\",\"status\":\"%s\"}",
-                    targetVersion.c_str(), status);
+                     targetVersion.c_str(), status);
         } else {
             snprintf(payload, sizeof(payload), "{\"version\":\"%s\",\"status\":\"%s\"}",
-                    currentFirmwareVersion, status);
+                     currentFirmwareVersion, status);
         }
     } else {
         snprintf(payload, sizeof(payload), "{\"version\":\"%s\",\"status\":\"%s\"}",
-                currentFirmwareVersion, status);
+                 currentFirmwareVersion, status);
     }
 
     if (!mqttClient.connected()) {
-        const char* versionToLog;
-        if (strcmp(status, "failed") == 0 || strcmp(status, "pending") == 0 || strcmp(status, "active") == 0) {
+        const char *versionToLog;
+        if (strcmp(status, "failed") == 0 || strcmp(status, "pending") == 0 ||
+            strcmp(status, "active") == 0) {
             this->preferences.begin("iotnet", false);
             String targetVersion = this->preferences.getString("targetVer", "");
             this->preferences.end();
-            
+
             if (targetVersion.length() > 0) {
                 versionToLog = targetVersion.c_str();
             } else {
@@ -874,26 +870,29 @@ void IotNetESP32::updateBoardStatus(const char *status) {
         } else {
             versionToLog = currentFirmwareVersion;
         }
-        
-        Serial.printf("Cannot publish board status for version %s: MQTT not connected\n", versionToLog);
-        
+
+        Serial.printf("Cannot publish board status for version %s: MQTT not connected\n",
+                      versionToLog);
+
         if (strcmp(status, "failed") == 0) {
             this->preferences.begin("iotnet", false);
             this->preferences.putBool("pubFailed", true);
             this->preferences.end();
-            Serial.printf("Saved failed status for version %s to preferences for next boot\n", versionToLog);
+            Serial.printf("Saved failed status for version %s to preferences for next boot\n",
+                          versionToLog);
         }
         return;
     }
 
-    bool success = mqttClient.publish(topic, (const uint8_t*)payload, strlen(payload), false); 
+    bool success = mqttClient.publish(topic, (const uint8_t *)payload, strlen(payload), false);
     if (!success) {
-        const char* versionToLog;
-        if (strcmp(status, "failed") == 0 || strcmp(status, "pending") == 0 || strcmp(status, "active") == 0) {
+        const char *versionToLog;
+        if (strcmp(status, "failed") == 0 || strcmp(status, "pending") == 0 ||
+            strcmp(status, "active") == 0) {
             this->preferences.begin("iotnet", false);
             String targetVersion = this->preferences.getString("targetVer", "");
             this->preferences.end();
-            
+
             if (targetVersion.length() > 0) {
                 versionToLog = targetVersion.c_str();
             } else {
@@ -902,29 +901,34 @@ void IotNetESP32::updateBoardStatus(const char *status) {
         } else {
             versionToLog = currentFirmwareVersion;
         }
-        
-        Serial.printf("Failed to publish board status for version %s to topic: %s\n", versionToLog, topic);
-        
+
+        Serial.printf("Failed to publish board status for version %s to topic: %s\n", versionToLog,
+                      topic);
+
         if (strcmp(status, "failed") == 0) {
             this->preferences.begin("iotnet", false);
             this->preferences.putBool("pubFailed", true);
-            this->preferences.putBool("justUpdated", false);
+            this->preferences.putBool("justUpdated",
+                                      false); // Make sure justUpdated is false for a failed update
             this->preferences.end();
-            Serial.printf("Saved failed status for version %s to preferences for next boot\n", versionToLog);
+            Serial.printf("Saved failed status for version %s to preferences for next boot\n",
+                          versionToLog);
         } else if (strcmp(status, "success") == 0) {
             this->preferences.begin("iotnet", false);
-            this->preferences.putBool("pubFailed", false); 
+            this->preferences.putBool("pubFailed",
+                                      false); // Ensure failed flag is cleared on success
+            // Note: justUpdated is handled separately when OTA completes
             this->preferences.end();
             Serial.printf("Saved success status for version %s\n", versionToLog);
         }
     } else {
-        char versionInPayload[32]; 
-        if (strcmp(status, "failed") == 0 || strcmp(status, "pending") == 0 || 
+        char versionInPayload[32];
+        if (strcmp(status, "failed") == 0 || strcmp(status, "pending") == 0 ||
             strcmp(status, "active") == 0 || strcmp(status, "success") == 0) {
             this->preferences.begin("iotnet", false);
             String targetVersion = this->preferences.getString("targetVer", "");
             this->preferences.end();
-            
+
             if (targetVersion.length() > 0) {
                 strncpy(versionInPayload, targetVersion.c_str(), sizeof(versionInPayload) - 1);
                 versionInPayload[sizeof(versionInPayload) - 1] = '\0';
@@ -936,7 +940,7 @@ void IotNetESP32::updateBoardStatus(const char *status) {
             strncpy(versionInPayload, currentFirmwareVersion, sizeof(versionInPayload) - 1);
             versionInPayload[sizeof(versionInPayload) - 1] = '\0';
         }
-        
+
         Serial.printf("Update Status: %s (Version: %s)\n", status, versionInPayload);
     }
 }
@@ -954,15 +958,15 @@ void IotNetESP32::registerBoard() {
     this->preferences.begin("iotnet", false);
     String targetVersion = this->preferences.getString("targetVer", "");
     this->preferences.end();
-    
+
     char payload[256];
     if (targetVersion.length() > 0) {
         snprintf(payload, sizeof(payload), "{\"version\":\"%s\"}", targetVersion.c_str());
-    } 
+    }
 
     if (!mqttClient.connected()) {
         Serial.println("Cannot register board: MQTT not connected");
-        
+
         if (reconnectMQTT()) {
             Serial.println("MQTT reconnected successfully in registerBoard");
         } else {
@@ -971,14 +975,14 @@ void IotNetESP32::registerBoard() {
         }
     }
 
-    bool success = mqttClient.publish(topic, (const uint8_t*)payload, strlen(payload), false); 
+    bool success = mqttClient.publish(topic, (const uint8_t *)payload, strlen(payload), false);
     if (!success) {
         Serial.printf("Failed to publish board registration to topic: %s\n", topic);
         delay(100);
-        success = mqttClient.publish(topic, (const uint8_t*)payload, strlen(payload), false);
+        success = mqttClient.publish(topic, (const uint8_t *)payload, strlen(payload), false);
         if (!success) {
             Serial.println("Second attempt to publish board registration failed");
-        } 
+        }
     }
 }
 
@@ -996,28 +1000,28 @@ String IotNetESP32::getFormattedExecutionTime() {
     if (totalTime == 0) {
         return "0ms";
     }
-    
+
     String formattedTime;
-    
+
     unsigned long hours = totalTime / 3600000;
     unsigned long minutes = (totalTime % 3600000) / 60000;
     unsigned long seconds = (totalTime % 60000) / 1000;
     unsigned long milliseconds = totalTime % 1000;
-    
+
     if (hours > 0) {
         formattedTime += String(hours) + "h ";
     }
-    
+
     if (minutes > 0 || hours > 0) {
         formattedTime += String(minutes) + "m ";
     }
-    
+
     if (seconds > 0 || minutes > 0 || hours > 0) {
         formattedTime += String(seconds) + "s ";
     }
-    
+
     formattedTime += String(milliseconds) + "ms";
-    
+
     return formattedTime;
 }
 
@@ -1025,20 +1029,20 @@ String IotNetESP32::getFormattedExecutionTime() {
 // Time Synchronization Methods
 //=======================================================================================
 
-void IotNetESP32::configureTime(const char* timezone, const char* ntpServer1, 
-                               const char* ntpServer2, const char* ntpServer3) {
+void IotNetESP32::configureTime(const char *timezone, const char *ntpServer1,
+                                const char *ntpServer2, const char *ntpServer3) {
     if (!timezone || !ntpServer1) {
         Serial.println("Error: Invalid time configuration parameters");
         return;
     }
-    
+
     strncpy(timeZone, timezone, sizeof(timeZone) - 1);
     timeZone[sizeof(timeZone) - 1] = '\0';
     configTzTime(timezone, ntpServer1, ntpServer2, ntpServer3);
-    
+
     int retry = 0;
     const int maxRetries = 10;
-    
+
     Serial.print("Waiting for NTP time sync");
     while (!isTimeSet() && retry < maxRetries) {
         Serial.print(".");
@@ -1046,7 +1050,7 @@ void IotNetESP32::configureTime(const char* timezone, const char* ntpServer1,
         retry++;
     }
     Serial.println("");
-    
+
     if (isTimeSet()) {
         timeConfigured = true;
         Serial.println("Time synchronized with NTP server");
@@ -1058,21 +1062,21 @@ void IotNetESP32::configureTime(const char* timezone, const char* ntpServer1,
 
 bool IotNetESP32::isTimeSet() {
     time_t now = time(nullptr);
-    return now > 1600000000;  
+    return now > 1600000000;
 }
 
-String IotNetESP32::getFormattedTime(const char* format) {
+String IotNetESP32::getFormattedTime(const char *format) {
     if (!isTimeSet()) {
         return "Time not synchronized";
     }
-    
+
     time_t now = time(nullptr);
     struct tm timeinfo;
     char buffer[80];
-    
+
     localtime_r(&now, &timeinfo);
     strftime(buffer, sizeof(buffer), format, &timeinfo);
-    
+
     return String(buffer);
 }
 
@@ -1248,9 +1252,11 @@ template <typename T> bool IotNetESP32::publishToPin(const char *pin, T value) {
     toString(value, valueStr, sizeof(valueStr));
 
     if (pinIndex == 0) {
-        return mqttClient.publish(pins[pinIndex].topic, (const uint8_t*)valueStr, strlen(valueStr), true);
+        return mqttClient.publish(pins[pinIndex].topic, (const uint8_t *)valueStr, strlen(valueStr),
+                                  true);
     } else {
-        return mqttClient.publish(pins[pinIndex].topic, (const uint8_t*)valueStr, strlen(valueStr), false);
+        return mqttClient.publish(pins[pinIndex].topic, (const uint8_t *)valueStr, strlen(valueStr),
+                                  false);
     }
 }
 

@@ -1,4 +1,3 @@
-#include <Arduino.h>
 #include <IotNetESP32.h>
 #include <WiFi.h>
 
@@ -15,36 +14,40 @@ const char* IOTNET_BOARD_NAME = "YOUR_IOTNET_BOARD_NAME";
 
 IotNetESP32 iotnet;
 
-void handlePinV1() {
+void handleVersion() {
+    iotnet.virtualWrite("V1", iotnet.version());
+}
+
+void handleCounterAscending() {
     static unsigned long lastUpdate = 0;
     static int counter = 1;
 
     if (iotnet.shouldUpdate(lastUpdate, 50)) {
-        iotnet.virtualWrite("V1", counter++);
+        iotnet.virtualWrite("V2", counter++);
         if (counter > 100) {
             counter = 1;
         }
     }
 }
 
-void handlePinV2() {
+void handleCounterDescending() {
     static unsigned long lastUpdate = 0;
     static int counter = 100;
 
     if (iotnet.shouldUpdate(lastUpdate, 50)) {
-        iotnet.virtualWrite("V2", counter--);
+        iotnet.virtualWrite("V3", counter--);
         if (counter < 1) {
             counter = 100;
         }
     }
 }
 
-void handlePinV3() {
-    if (!iotnet.hasNewValue("V3")) {
+void handlePinLED() {
+    if (!iotnet.hasNewValue("V4")) {
         return;
     }
 
-    int data = iotnet.virtualRead<int>("V3");
+    int data = iotnet.virtualRead<int>("V4");
     if(data == 1) {
         digitalWrite(LED_PIN, HIGH);
     } else if (data == 0) {
@@ -52,13 +55,13 @@ void handlePinV3() {
     }
 }
 
-void handlePinV4() {
-    if (!iotnet.hasNewValue("V4")) {
+void handlePinPotentiometer() {
+    if (!iotnet.hasNewValue("V5")) {
         return;
     }
 
-    int data = iotnet.virtualRead<int>("V4");
-    iotnet.virtualWrite("V5", data);
+    int data = iotnet.virtualRead<int>("V5");
+    iotnet.virtualWrite("V6", data);
 }
 
 void setupWiFi() {
@@ -90,7 +93,6 @@ void setup() {
 
     setupWiFi();
     
-    iotnet.version("1.0.0");
     iotnet.begin();
 }
 
@@ -99,8 +101,9 @@ void loop() {
     
     iotnet.run();
     
-    handlePinV1();
-    handlePinV2();
-    handlePinV3();
-    handlePinV4();
+    handleVersion();
+    handleCounterAscending();
+    handleCounterDescending();
+    handlePinLED();
+    handlePinPotentiometer();
 }

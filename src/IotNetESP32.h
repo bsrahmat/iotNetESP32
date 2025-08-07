@@ -12,8 +12,8 @@
 #include <esp_heap_caps.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
-#include <time.h>
 #include <sys/time.h>
+#include <time.h>
 
 class IotNetESP32 {
   public:
@@ -56,13 +56,13 @@ class IotNetESP32 {
 
     unsigned long getExecutionTime();
     String getFormattedExecutionTime();
-    
+
     // Time synchronization methods
-    void configureTime(const char* timezone = "UTC", const char* ntpServer1 = "pool.ntp.org", 
-                      const char* ntpServer2 = "time.nist.gov", const char* ntpServer3 = nullptr);
+    void configureTime(const char *timezone = "UTC", const char *ntpServer1 = "pool.ntp.org",
+                       const char *ntpServer2 = "time.nist.gov", const char *ntpServer3 = nullptr);
     bool isTimeSet();
-    String getFormattedTime(const char* format = "%Y-%m-%d %H:%M:%S");
-    
+    String getFormattedTime(const char *format = "%Y-%m-%d %H:%M:%S");
+
     template <typename T> bool virtualWrite(const char *pin, T value);
     template <typename T> T virtualRead(const char *pin);
 
@@ -81,8 +81,6 @@ class IotNetESP32 {
 
     struct CertificateInfo {
         const char *caCert;
-        const char *clientCert;
-        const char *clientKey;
     };
 
     WiFiClientSecure espClient;
@@ -93,12 +91,12 @@ class IotNetESP32 {
     MqttConfig mqttConfig;
     CertificateInfo certificates;
     char currentFirmwareVersion[16];
-    
+
     // Variables to track execution time
     unsigned long startTimestamp;
     unsigned long endTimestamp;
     bool timingActive;
-    
+
     // Time synchronization variables
     char timeZone[64];
     bool timeConfigured;

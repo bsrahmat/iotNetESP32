@@ -24,6 +24,6 @@
         "bblanchon/ArduinoJson": ">=7.2.0",
         "knolleary/PubSubClient": ">=2.8"
     },
-    "headers": "IotNetESP32.h",
+    "headers": "iotNetESP32.h",
     "homepage": "https://i-ot.net"
 }
