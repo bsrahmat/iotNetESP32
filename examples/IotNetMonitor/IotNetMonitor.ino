@@ -1,4 +1,3 @@
-#include <Arduino.h>
 #include <IotNetESP32.h>
 #include <WiFi.h>
 
@@ -16,12 +15,16 @@ const char* IOTNET_BOARD_NAME = "YOUR_IOTNET_BOARD_NAME";
 
 IotNetESP32 iotnet;
 
+void handleVersion() {
+    iotnet.virtualWrite("V1", iotnet.version());
+}
+
 void handlePotentiometer() {
     static unsigned long lastUpdate = 0;
     
     if (iotnet.shouldUpdate(lastUpdate, 100)) {
         int sensorValue = analogRead(POTENTIOMETER_PIN);
-        iotnet.virtualWrite("V1", sensorValue);
+        iotnet.virtualWrite("V2", sensorValue);
     }
 }
 
@@ -53,7 +56,6 @@ void setup() {
 
     setupWiFi();
     
-    iotnet.version("1.0.0");
     iotnet.begin();
 }
 
@@ -62,5 +64,6 @@ void loop() {
     
     iotnet.run();
     
+    handleVersion();
     handlePotentiometer();
 }

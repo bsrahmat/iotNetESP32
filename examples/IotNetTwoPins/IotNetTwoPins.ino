@@ -1,4 +1,3 @@
-#include <Arduino.h>
 #include <IotNetESP32.h>
 #include <WiFi.h>
 
@@ -17,21 +16,25 @@ const char* IOTNET_BOARD_NAME = "YOUR_IOTNET_BOARD_NAME";
 
 IotNetESP32 iotnet;
 
+void handleVersion() {
+    iotnet.virtualWrite("V1", iotnet.version());
+}
+
 void handlePotentiometer() {
     static unsigned long lastUpdate = 0;
     
     if (iotnet.shouldUpdate(lastUpdate, 100)) {
         int sensorValue = analogRead(POTENTIOMETER_PIN);
-        iotnet.virtualWrite("V1", sensorValue);
+        iotnet.virtualWrite("V2", sensorValue);
     }
 }
 
 void handleLED() {
-    if (!iotnet.hasNewValue("V2")) {
+    if (!iotnet.hasNewValue("V3")) {
         return;
     }
 
-    int data = iotnet.virtualRead<int>("V2");
+    int data = iotnet.virtualRead<int>("V3");
     if(data == 1) {
         digitalWrite(LED_PIN, HIGH);
     } else if (data == 0) {
@@ -40,12 +43,12 @@ void handleLED() {
 }
 
 void handleLoopback() {
-    if (!iotnet.hasNewValue("V3")) {
+    if (!iotnet.hasNewValue("V4")) {
         return;
     }
 
-    int data = iotnet.virtualRead<int>("V3");
-    iotnet.virtualWrite("V4", data);
+    int data = iotnet.virtualRead<int>("V4");
+    iotnet.virtualWrite("V5", data);
 }
 
 void setupWiFi() {
@@ -78,7 +81,6 @@ void setup() {
 
     setupWiFi();
     
-    iotnet.version("1.0.0");
     iotnet.begin();
 }
 
@@ -87,6 +89,7 @@ void loop() {
     
     iotnet.run();
     
+    handleVersion();
     handlePotentiometer();
     handleLED();
     handleLoopback();

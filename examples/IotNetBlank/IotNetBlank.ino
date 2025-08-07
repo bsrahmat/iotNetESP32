@@ -1,4 +1,3 @@
-#include <Arduino.h>
 #include <IotNetESP32.h>
 #include <WiFi.h>
 
@@ -39,7 +38,6 @@ void setup() {
 
     setupWiFi();
     
-    iotnet.version("1.0.0");
     iotnet.begin();
 }
 

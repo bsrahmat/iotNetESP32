@@ -1,4 +1,3 @@
-#include <Arduino.h>
 #include <IotNetESP32.h>
 #include <WiFi.h>
 
@@ -15,12 +14,16 @@ const char* IOTNET_BOARD_NAME = "YOUR_IOTNET_BOARD_NAME";
 
 IotNetESP32 iotnet;
 
-void handlePinV1() {
-    if (!iotnet.hasNewValue("V1")) {
+void handleVersion() {
+    iotnet.virtualWrite("V1", iotnet.version());
+}
+
+void handleLED() {
+    if (!iotnet.hasNewValue("V2")) {
         return;
     }
 
-    int data = iotnet.virtualRead<int>("V1");
+    int data = iotnet.virtualRead<int>("V2");
     if(data == 1) {
         digitalWrite(LED_PIN, HIGH);
     } else if (data == 0) {
@@ -57,7 +60,6 @@ void setup() {
 
     setupWiFi();
     
-    iotnet.version("1.0.0");
     iotnet.begin();
 }
 
@@ -65,6 +67,7 @@ void loop() {
     checkWiFiConnection();
     
     iotnet.run();
-    
-    handlePinV1();
+
+    handleVersion();
+    handleLED();
 }
