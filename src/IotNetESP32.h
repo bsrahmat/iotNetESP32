@@ -3,10 +3,8 @@
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
-#include <HTTPClient.h>
 #include <Preferences.h>
 #include <PubSubClient.h>
-#include <Update.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <esp_heap_caps.h>
@@ -34,11 +32,6 @@ class IotNetESP32 {
         void (*callback)(String);
     };
 
-    struct OtaUpdateInfo {
-        char signature[136];
-        char version[16];
-        uint32_t nonce;
-    };
 
     IotNetESP32();
 
@@ -119,9 +112,6 @@ class IotNetESP32 {
     static void staticMqttCallback(char *topic, byte *payload, unsigned int length);
     void mqttCallback(char *topic, byte *payload, unsigned int length);
 
-    void processOtaUpdate(const char *otaMessage);
-    static void otaUpdateTask(void *parameters);
-    void subscribeToOtaUpdates();
     void updateBoardStatus(const char *status);
     void registerBoard();
 
