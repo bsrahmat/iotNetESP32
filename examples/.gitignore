@@ -1,0 +1,2 @@
+# Ignore test sketches with credentials
+IotNetOtaRemovalTest/
