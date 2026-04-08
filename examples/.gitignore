@@ -1,2 +1,5 @@
 # Ignore test sketches with credentials
 IotNetOtaRemovalTest/
+
+# Ignore src/main.cpp test file (contains credentials)
+../src/main.cpp
