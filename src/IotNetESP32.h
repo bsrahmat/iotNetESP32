@@ -60,6 +60,10 @@ class IotNetESP32 {
     void publishBoardStatus(const char *status = "success");
     void publishBoardRegistration();
 
+    // OTA update methods (public API)
+    void enableOtaUpdates();
+    bool isOtaInProgress() const;
+
     template <typename T> bool virtualWrite(const char *pin, T value);
     template <typename T> T virtualRead(const char *pin);
 
@@ -102,6 +106,11 @@ class IotNetESP32 {
     PinCallback callbacks[MAX_PINS];
     int numCallbacks;
 
+    // OTA state
+    bool otaUpdatesEnabled;
+    bool otaInProgress;
+    char otaTopic[120];
+
     void setMQTTCredentials(const char *username, const char *password);
     void setCertificates();
     void setupCertificates();
@@ -118,6 +127,11 @@ class IotNetESP32 {
 
     void updateBoardStatusInternal(const char *status);
     void registerBoardInternal();
+
+    // OTA update methods (private)
+    void subscribeToOtaUpdates();
+    void handleOtaMessage(const char* payload);
+    bool downloadAndFlashFirmware(const char* url);
 
     size_t getFreeHeap();
 

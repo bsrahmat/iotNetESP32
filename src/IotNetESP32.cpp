@@ -1,5 +1,7 @@
 #include "IotNetESP32.h"
 #include "i-ot.net.h"
+#include <HTTPClient.h>
+#include <Update.h>
 
 static IotNetESP32 *currentInstance = nullptr;
 extern const char *IOTNET_USERNAME;
@@ -13,10 +15,11 @@ extern const char *IOTNET_BOARD_NAME;
 IotNetESP32::IotNetESP32()
     : mqttClient(espClient), credentials{nullptr, nullptr, nullptr}, mqttConfig{nullptr, 0, 0},
       certificates{nullptr}, numCallbacks(0), startTimestamp(0), endTimestamp(0),
-      timingActive(false), timeConfigured(false) {
+      timingActive(false), timeConfigured(false), otaUpdatesEnabled(false), otaInProgress(false) {
     currentInstance = this;
     strcpy(currentFirmwareVersion, "1.0.0");
     strcpy(timeZone, "UTC");
+    otaTopic[0] = '\0';
     for (int i = 0; i < MAX_PINS; i++) {
         pins[i].initialized = false;
         pins[i].updated = false;
@@ -192,6 +195,11 @@ bool IotNetESP32::reconnectMQTT() {
     // Auto-register board after successful MQTT connection
     registerBoardInternal();
 
+    // Subscribe to OTA updates if enabled
+    if (otaUpdatesEnabled) {
+        subscribeToOtaUpdates();
+    }
+
     return true;
 }
 
@@ -291,6 +299,18 @@ void IotNetESP32::staticMqttCallback(char *topic, byte *payload, unsigned int le
 
 void IotNetESP32::mqttCallback(char *topic, byte *payload, unsigned int length) {
     if (!topic || !payload || length == 0) {
+        return;
+    }
+
+    // Check if this is an OTA update message
+    if (otaUpdatesEnabled && strlen(otaTopic) > 0 && strcmp(topic, otaTopic) == 0) {
+        char *message = new char[length + 1];
+        if (message) {
+            memcpy(message, payload, length);
+            message[length] = '\0';
+            handleOtaMessage(message);
+            delete[] message;
+        }
         return;
     }
 
@@ -505,6 +525,169 @@ void IotNetESP32::publishBoardStatus(const char *status) {
 
 void IotNetESP32::publishBoardRegistration() {
     registerBoardInternal();
+}
+
+//=======================================================================================
+// OTA Update Implementation
+//=======================================================================================
+
+void IotNetESP32::enableOtaUpdates() {
+    otaUpdatesEnabled = true;
+    if (mqttClient.connected()) {
+        subscribeToOtaUpdates();
+    }
+    Serial.println("[OTA] OTA updates enabled");
+}
+
+bool IotNetESP32::isOtaInProgress() const {
+    return otaInProgress;
+}
+
+void IotNetESP32::subscribeToOtaUpdates() {
+    if (!credentials.mqttUsername || !credentials.boardName) {
+        Serial.println("[OTA] Error: Cannot subscribe to OTA updates - credentials not set");
+        return;
+    }
+
+    snprintf(otaTopic, sizeof(otaTopic), "devices/%s/%s/ota/update",
+             credentials.mqttUsername, credentials.boardName);
+
+    if (mqttClient.subscribe(otaTopic)) {
+        Serial.printf("[OTA] Subscribed to OTA topic: %s\n", otaTopic);
+    } else {
+        Serial.printf("[OTA] Failed to subscribe to OTA topic: %s\n", otaTopic);
+    }
+}
+
+void IotNetESP32::handleOtaMessage(const char* payload) {
+    if (!payload || strlen(payload) == 0) {
+        Serial.println("[OTA] Error: Empty OTA message");
+        return;
+    }
+
+    Serial.printf("[OTA] Received OTA message: %s\n", payload);
+
+    // Parse JSON payload
+    StaticJsonDocument<256> doc;
+    DeserializationError error = deserializeJson(doc, payload);
+
+    if (error) {
+        Serial.printf("[OTA] JSON parse error: %s\n", error.c_str());
+        return;
+    }
+
+    // Extract URL field
+    const char* url = doc["url"];
+    if (!url || strlen(url) == 0) {
+        Serial.println("[OTA] Error: No download URL in OTA message");
+        return;
+    }
+
+    // Extract version for logging
+    const char* version = doc["version"];
+    if (version) {
+        Serial.printf("[OTA] Update requested: version %s\n", version);
+    }
+
+    // Start download and flash
+    bool success = downloadAndFlashFirmware(url);
+    if (success) {
+        Serial.println("[OTA] Update successful! Rebooting...");
+        updateBoardStatusInternal("success");
+        delay(1000);
+        ESP.restart();
+    } else {
+        Serial.println("[OTA] Update failed. Continuing with current firmware.");
+        updateBoardStatusInternal("failed");
+    }
+}
+
+bool IotNetESP32::downloadAndFlashFirmware(const char* url) {
+    if (!url || strlen(url) == 0) {
+        Serial.println("[OTA] Error: Invalid download URL");
+        return false;
+    }
+
+    otaInProgress = true;
+    Serial.printf("[OTA] Downloading firmware from: %s\n", url);
+
+    HTTPClient http;
+    http.setReuse(false);
+    http.setConnectTimeout(10000);
+    http.setTimeout(30000);
+
+    // Begin connection
+    int httpCode = http.begin(url);
+    if (httpCode <= 0) {
+        Serial.printf("[OTA] HTTP begin failed with code: %d\n", httpCode);
+        http.end();
+        otaInProgress = false;
+        return false;
+    }
+
+    // Execute GET
+    httpCode = http.GET();
+    if (httpCode != HTTP_CODE_OK) {
+        Serial.printf("[OTA] HTTP GET failed with code: %d\n", httpCode);
+        http.end();
+        otaInProgress = false;
+        return false;
+    }
+
+    // Get stream and size
+    WiFiClient* stream = http.getStreamPtr();
+    int contentLength = http.getSize();
+
+    if (contentLength <= 0) {
+        Serial.println("[OTA] Error: Invalid content length");
+        http.end();
+        otaInProgress = false;
+        return false;
+    }
+
+    Serial.printf("[OTA] Download size: %d bytes\n", contentLength);
+    Serial.printf("[OTA] Free heap before update: %d bytes\n", ESP.getFreeHeap());
+
+    // Begin update
+    if (!Update.begin(contentLength)) {
+        Serial.printf("[OTA] Update begin failed: %s\n", Update.errorString());
+        http.end();
+        otaInProgress = false;
+        return false;
+    }
+
+    // Write stream to update
+    size_t written = Update.writeStream(*stream);
+    if (written != contentLength) {
+        Serial.printf("[OTA] Write mismatch: expected %d, got %d\n", contentLength, written);
+        Update.abort();
+        http.end();
+        otaInProgress = false;
+        return false;
+    }
+
+    Serial.printf("[OTA] Download complete: %d bytes written\n", written);
+
+    // End update
+    if (!Update.end()) {
+        Serial.printf("[OTA] Update end failed: %s\n", Update.errorString());
+        http.end();
+        otaInProgress = false;
+        return false;
+    }
+
+    // Verify
+    if (!Update.isFinished()) {
+        Serial.println("[OTA] Update verification failed");
+        http.end();
+        otaInProgress = false;
+        return false;
+    }
+
+    Serial.println("[OTA] Firmware flashed successfully");
+    http.end();
+    otaInProgress = false;
+    return true;
 }
 
 //=======================================================================================
