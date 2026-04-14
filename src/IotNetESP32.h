@@ -56,6 +56,10 @@ class IotNetESP32 {
     bool isTimeSet();
     String getFormattedTime(const char *format = "%Y-%m-%d %H:%M:%S");
 
+    // Board registration and status methods (public API)
+    void publishBoardStatus(const char *status = "success");
+    void publishBoardRegistration();
+
     template <typename T> bool virtualWrite(const char *pin, T value);
     template <typename T> T virtualRead(const char *pin);
 
@@ -112,8 +116,8 @@ class IotNetESP32 {
     static void staticMqttCallback(char *topic, byte *payload, unsigned int length);
     void mqttCallback(char *topic, byte *payload, unsigned int length);
 
-    void updateBoardStatus(const char *status);
-    void registerBoard();
+    void updateBoardStatusInternal(const char *status);
+    void registerBoardInternal();
 
     size_t getFreeHeap();
 

@@ -188,6 +188,10 @@ bool IotNetESP32::reconnectMQTT() {
             mqttClient.subscribe(pins[i].topic);
         }
     }
+
+    // Auto-register board after successful MQTT connection
+    registerBoardInternal();
+
     return true;
 }
 
@@ -266,7 +270,7 @@ void IotNetESP32::initPinTopic(int pin) {
         return;
     }
 
-    snprintf(pins[pin].topic, sizeof(pins[pin].topic), "/device/%s/%s/V%d",
+    snprintf(pins[pin].topic, sizeof(pins[pin].topic), "devices/%s/%s/V%d",
              credentials.mqttUsername, credentials.boardName, pin);
 
     // Initialize pin state
@@ -321,7 +325,7 @@ void IotNetESP32::mqttCallback(char *topic, byte *payload, unsigned int length) 
     delete[] message;
 }
 
-void IotNetESP32::updateBoardStatus(const char *status) {
+void IotNetESP32::updateBoardStatusInternal(const char *status) {
     if (!status || !credentials.mqttUsername || !credentials.boardName ||
         !credentials.mqttPassword) {
         Serial.printf("Error: Missing parameters for updateBoardStatus (Current version: %s)\n",
@@ -340,7 +344,7 @@ void IotNetESP32::updateBoardStatus(const char *status) {
     }
 
     char topic[120];
-    snprintf(topic, sizeof(topic), "/device/%s/%s/status", credentials.mqttUsername,
+    snprintf(topic, sizeof(topic), "devices/%s/%s/status", credentials.mqttUsername,
              credentials.boardName);
 
     char payload[256];
@@ -362,14 +366,14 @@ void IotNetESP32::updateBoardStatus(const char *status) {
     }
 }
 
-void IotNetESP32::registerBoard() {
+void IotNetESP32::registerBoardInternal() {
     if (!credentials.mqttUsername || !credentials.boardName || !credentials.mqttPassword) {
         Serial.println("Error: Missing parameters for registerBoard");
         return;
     }
 
     char topic[120];
-    snprintf(topic, sizeof(topic), "/device/%s/%s/board", credentials.mqttUsername,
+    snprintf(topic, sizeof(topic), "devices/%s/%s/board", credentials.mqttUsername,
              credentials.boardName);
 
     char payload[256];
@@ -379,9 +383,9 @@ void IotNetESP32::registerBoard() {
         Serial.println("Cannot register board: MQTT not connected");
 
         if (reconnectMQTT()) {
-            Serial.println("MQTT reconnected successfully in registerBoard");
+            Serial.println("MQTT reconnected successfully in registerBoardInternal");
         } else {
-            Serial.println("Failed to reconnect MQTT in registerBoard");
+            Serial.println("Failed to reconnect MQTT in registerBoardInternal");
             return;
         }
     }
@@ -489,6 +493,18 @@ String IotNetESP32::getFormattedTime(const char *format) {
     strftime(buffer, sizeof(buffer), format, &timeinfo);
 
     return String(buffer);
+}
+
+//=======================================================================================
+// Public Board Registration and Status API
+//=======================================================================================
+
+void IotNetESP32::publishBoardStatus(const char *status) {
+    updateBoardStatusInternal(status);
+}
+
+void IotNetESP32::publishBoardRegistration() {
+    registerBoardInternal();
 }
 
 //=======================================================================================
