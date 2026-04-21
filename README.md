@@ -45,10 +45,13 @@ To use the IotNetESP32 library in your project, you need to include the library 
 const char* WIFI_SSID = "YOUR_WIFI_SSID";
 const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
 
-// Authentication credentials
-const char* IOTNET_USERNAME = "YOUR_IOTNET_USERNAME";
-const char* IOTNET_PASSWORD = "YOUR_IOTNET_PASSWORD";
-const char* IOTNET_BOARD_NAME = "YOUR_IOTNET_BOARD_NAME";
+IotNetESP32::ClientConfig config = {
+    .mqttUsername = "DEVICE_ID",
+    .mqttPassword = "DEVICE_SECRET",
+    .boardName = "BOARD_ID",
+    .firmwareVersion = "1.0.0",
+    .enableOta = true
+};
 
 IotNetESP32 iotnet;
 
@@ -78,8 +81,7 @@ void setup() {
 
     setupWiFi();
 
-    iotnet.version("1.0.0");
-    iotnet.begin();
+    iotnet.begin(config);
 }
 
 void loop() {
@@ -104,10 +106,13 @@ const int LED_PIN = LED_BUILTIN;
 const char* WIFI_SSID = "YOUR_WIFI_SSID";
 const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
 
-// Authentication credentials
-const char* IOTNET_USERNAME = "YOUR_IOTNET_USERNAME";
-const char* IOTNET_PASSWORD = "YOUR_IOTNET_PASSWORD";
-const char* IOTNET_BOARD_NAME = "YOUR_IOTNET_BOARD_NAME";
+IotNetESP32::ClientConfig config = {
+    .mqttUsername = "DEVICE_ID",
+    .mqttPassword = "DEVICE_SECRET",
+    .boardName = "BOARD_ID",
+    .firmwareVersion = "1.0.0",
+    .enableOta = true
+};
 
 IotNetESP32 iotnet;
 
@@ -153,8 +158,7 @@ void setup() {
 
     setupWiFi();
 
-    iotnet.version("1.0.0");
-    iotnet.begin();
+    iotnet.begin(config);
 }
 
 void loop() {
@@ -181,10 +185,13 @@ const int LED_PIN = 2;
 const char* WIFI_SSID = "YOUR_WIFI_SSID";
 const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
 
-// Authentication credentials
-const char* IOTNET_USERNAME = "YOUR_IOTNET_USERNAME";
-const char* IOTNET_PASSWORD = "YOUR_IOTNET_PASSWORD";
-const char* IOTNET_BOARD_NAME = "YOUR_IOTNET_BOARD_NAME";
+IotNetESP32::ClientConfig config = {
+    .mqttUsername = "DEVICE_ID",
+    .mqttPassword = "DEVICE_SECRET",
+    .boardName = "BOARD_ID",
+    .firmwareVersion = "1.0.0",
+    .enableOta = true
+};
 
 IotNetESP32 iotnet;
 
@@ -263,8 +270,7 @@ void setup() {
 
     setupWiFi();
 
-    iotnet.version("1.0.0");
-    iotnet.begin();
+    iotnet.begin(config);
 }
 
 void loop() {
@@ -281,13 +287,31 @@ void loop() {
 
 ## Key Features and Functions
 
-- `iotnet.begin()`: Initialize IoTNet connection
+- `iotnet.begin(ClientConfig)`: Initialize with runtime credentials/config (no global extern requirement)
 - `iotnet.version(VERSION)`: Set the firmware version for OTA updates
 - `iotnet.run()`: Main method to handle MQTT connection and message processing
 - `iotnet.virtualRead<T>(PIN)`: Read data from a virtual pin with type conversion
 - `iotnet.virtualWrite(PIN, VALUE)`: Write data to a virtual pin
 - `iotnet.hasNewValue(PIN)`: Check if a virtual pin has a new value
 - `iotnet.shouldUpdate(lastUpdate, interval)`: Helper for time-based updates
+
+### Runtime Config (V2-style bootstrap)
+
+You can now start the client without compile-time credential globals by passing config at runtime:
+
+```cpp
+IotNetESP32::ClientConfig cfg = {
+  .mqttUsername = "DEVICE_ID",
+  .mqttPassword = "MQTT_PASSWORD",
+  .boardName = "BOARD_IDENTIFIER",
+  .firmwareVersion = "1.2.3",
+  .enableOta = true
+};
+
+iotnet.begin(cfg);
+```
+
+`begin(ClientConfig)` is the required initialization path for all projects.
 
 ## Available Examples
 

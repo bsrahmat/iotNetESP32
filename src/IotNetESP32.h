@@ -7,22 +7,29 @@
 #include <PubSubClient.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
+#include <ota/OtaSessionState.h>
 #include <esp_heap_caps.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <sys/time.h>
 #include <time.h>
+#include "core/ClientConfig.h"
 
 class IotNetESP32 {
   public:
     static constexpr int MAX_PINS = 50;
+    static constexpr size_t MAX_TOPIC_LENGTH = 120;
+    static constexpr size_t MAX_VALUE_LENGTH = 32;
+    static constexpr size_t MAX_MESSAGE_BUFFER_SIZE = 384;
+    static constexpr size_t MAX_CREDENTIAL_LENGTH = 96;
     static constexpr unsigned long RECONNECT_DELAY_MS = 5000;
     static constexpr unsigned long WIFI_TIMEOUT_MS = 30000;
     static constexpr unsigned long MQTT_TIMEOUT_MS = 60000;
+    static constexpr unsigned long OTA_SESSION_TIMEOUT_MS = 30000;
 
     struct PinState {
-        char topic[120];
-        char value[32];
+        char topic[MAX_TOPIC_LENGTH];
+        char value[MAX_VALUE_LENGTH];
         bool updated;
         bool initialized;
     };
@@ -36,7 +43,12 @@ class IotNetESP32 {
     IotNetESP32();
 
     void run();
-    void begin();
+    void begin(const ClientConfig &config);
+    void begin(const char *mqttUsername,
+               const char *mqttPassword,
+               const char *boardName,
+               const char *firmwareVersion = nullptr,
+               bool enableOta = false);
     void connect();
     void version(const char *version);
     const char *version() const;
@@ -110,8 +122,16 @@ class IotNetESP32 {
     bool otaUpdatesEnabled;
     bool otaInProgress;
     char otaTopic[120];
+    char otaSessionRequestTopic[120];
+    char otaSessionResponseTopic[120];
 
-    void setMQTTCredentials(const char *username, const char *password);
+    // OTA session state (ephemeral)
+    iotnetesp32::ota::OtaSessionState otaSession;
+    char runtimeMqttUsername[MAX_CREDENTIAL_LENGTH];
+    char runtimeMqttPassword[MAX_CREDENTIAL_LENGTH];
+    char runtimeBoardName[MAX_CREDENTIAL_LENGTH];
+
+    bool applyRuntimeConfig(const ClientConfig &config);
     void setCertificates();
     void setupCertificates();
 
@@ -131,7 +151,11 @@ class IotNetESP32 {
     // OTA update methods (private)
     void subscribeToOtaUpdates();
     void handleOtaMessage(const char* payload);
+    void requestOtaSessionKey();
+    void handleOtaSessionResponse(const char* payload);
+    bool fetchOtaLinkWithSessionKey(const char* sessionKey, const char* otaId, long nonce, const char* version);
     bool downloadAndFlashFirmware(const char* url);
+    bool copyPayloadToBuffer(const byte *payload, unsigned int length, char *buffer, size_t bufferSize);
 
     size_t getFreeHeap();
 
