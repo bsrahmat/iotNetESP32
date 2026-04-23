@@ -3,7 +3,7 @@
 #include "core/TopicBuilder.h"
 
 void IotNetESP32::updateBoardStatusInternal(const char *status) {
-    if (!status || !credentials.mqttUsername || !credentials.boardName || !credentials.mqttPassword) {
+    if (!status || !credentials.mqttUsername || !credentials.boardIdentifier || !credentials.mqttPassword) {
         Serial.printf("Error: Missing parameters for updateBoardStatus (Current version: %s)\n",
                       currentFirmwareVersion);
         return;
@@ -24,7 +24,7 @@ void IotNetESP32::updateBoardStatusInternal(const char *status) {
             topic,
             sizeof(topic),
             credentials.mqttUsername,
-            credentials.boardName,
+            credentials.boardIdentifier,
             "status"
         )) {
         Serial.println("Failed to build board status topic");
@@ -51,7 +51,7 @@ void IotNetESP32::updateBoardStatusInternal(const char *status) {
 }
 
 void IotNetESP32::registerBoardInternal() {
-    if (!credentials.mqttUsername || !credentials.boardName || !credentials.mqttPassword) {
+    if (!credentials.mqttUsername || !credentials.boardIdentifier || !credentials.mqttPassword) {
         Serial.println("Error: Missing parameters for registerBoard");
         return;
     }
@@ -61,7 +61,7 @@ void IotNetESP32::registerBoardInternal() {
             topic,
             sizeof(topic),
             credentials.mqttUsername,
-            credentials.boardName,
+            credentials.boardIdentifier,
             "board"
         )) {
         Serial.println("Failed to build board registration topic");

@@ -67,7 +67,7 @@ void IotNetESP32::initPinTopic(int pin) {
         return;
     }
 
-    if (!credentials.mqttUsername || !credentials.boardName) {
+    if (!credentials.mqttUsername || !credentials.boardIdentifier) {
         Serial.println("Error: Cannot initialize pin topic - MQTT username or board name is not set");
         return;
     }
@@ -76,7 +76,7 @@ void IotNetESP32::initPinTopic(int pin) {
             pins[pin].topic,
             sizeof(pins[pin].topic),
             credentials.mqttUsername,
-            credentials.boardName,
+            credentials.boardIdentifier,
             pin
         )) {
         Serial.println("Error: Failed to build pin topic");

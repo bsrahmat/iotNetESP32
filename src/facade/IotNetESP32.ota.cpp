@@ -19,7 +19,7 @@ bool IotNetESP32::isOtaInProgress() const {
 }
 
 void IotNetESP32::subscribeToOtaUpdates() {
-    if (!credentials.mqttUsername || !credentials.boardName) {
+    if (!credentials.mqttUsername || !credentials.boardIdentifier) {
         Serial.println("[OTA] FAIL: Cannot subscribe - credentials not set");
         return;
     }
@@ -28,21 +28,21 @@ void IotNetESP32::subscribeToOtaUpdates() {
             otaTopic,
             sizeof(otaTopic),
             credentials.mqttUsername,
-            credentials.boardName,
+            credentials.boardIdentifier,
             "ota/update"
         ) ||
         !iotnet::core::buildDeviceTopic(
             otaSessionRequestTopic,
             sizeof(otaSessionRequestTopic),
             credentials.mqttUsername,
-            credentials.boardName,
+            credentials.boardIdentifier,
             "ota/session/request"
         ) ||
         !iotnet::core::buildDeviceTopic(
             otaSessionResponseTopic,
             sizeof(otaSessionResponseTopic),
             credentials.mqttUsername,
-            credentials.boardName,
+            credentials.boardIdentifier,
             "ota/session/response"
         )) {
         Serial.println("[OTA] FAIL: Unable to build OTA topics");

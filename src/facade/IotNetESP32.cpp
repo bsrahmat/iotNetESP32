@@ -47,13 +47,13 @@ void IotNetESP32::begin(const ClientConfig &config) {
 
 void IotNetESP32::begin(const char *mqttUsername,
                         const char *mqttPassword,
-                        const char *boardName,
+                        const char *boardIdentifier,
                         const char *firmwareVersion,
                         bool enableOta) {
     ClientConfig config = {
         .mqttUsername = mqttUsername,
         .mqttPassword = mqttPassword,
-        .boardName = boardName,
+        .boardIdentifier = boardIdentifier,
         .firmwareVersion = firmwareVersion,
         .enableOta = enableOta
     };
@@ -114,7 +114,7 @@ void IotNetESP32::setMQTTServer() {
 }
 
 bool IotNetESP32::applyRuntimeConfig(const ClientConfig &config) {
-    if (!config.mqttUsername || !config.mqttPassword || !config.boardName) {
+    if (!config.mqttUsername || !config.mqttPassword || !config.boardIdentifier) {
         return false;
     }
 
@@ -124,12 +124,12 @@ bool IotNetESP32::applyRuntimeConfig(const ClientConfig &config) {
     strncpy(runtimeMqttPassword, config.mqttPassword, sizeof(runtimeMqttPassword) - 1);
     runtimeMqttPassword[sizeof(runtimeMqttPassword) - 1] = '\0';
 
-    strncpy(runtimeBoardName, config.boardName, sizeof(runtimeBoardName) - 1);
+    strncpy(runtimeBoardName, config.boardIdentifier, sizeof(runtimeBoardName) - 1);
     runtimeBoardName[sizeof(runtimeBoardName) - 1] = '\0';
 
     this->credentials.mqttUsername = runtimeMqttUsername;
     this->credentials.mqttPassword = runtimeMqttPassword;
-    this->credentials.boardName = runtimeBoardName;
+    this->credentials.boardIdentifier = runtimeBoardName;
 
     if (config.firmwareVersion) {
         version(config.firmwareVersion);
@@ -226,7 +226,7 @@ bool IotNetESP32::reconnectMQTT() {
         return true;
     }
 
-    if (!credentials.mqttUsername || !credentials.mqttPassword || !credentials.boardName) {
+    if (!credentials.mqttUsername || !credentials.mqttPassword || !credentials.boardIdentifier) {
         Serial.println("Error: MQTT credentials or board name not set");
         return false;
     }
@@ -237,7 +237,7 @@ bool IotNetESP32::reconnectMQTT() {
 
     bool connected = iotnetesp32::mqtt::MqttConnectionManager::connectWithLwt(
         mqttClient,
-        credentials.boardName,
+        credentials.boardIdentifier,
         credentials.mqttUsername,
         credentials.mqttPassword,
         pins[mqttConfig.statusPin].topic,

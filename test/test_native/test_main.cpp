@@ -11,17 +11,17 @@ void test_client_config_struct_initialization() {
     ClientConfig config = {
         .mqttUsername = "test_user",
         .mqttPassword = "test_pass",
-        .boardName = "test_board",
+        .boardIdentifier = "test_board",
         .firmwareVersion = "1.0.0",
         .enableOta = true
     };
 
     TEST_ASSERT_NOT_NULL(config.mqttUsername);
     TEST_ASSERT_NOT_NULL(config.mqttPassword);
-    TEST_ASSERT_NOT_NULL(config.boardName);
+    TEST_ASSERT_NOT_NULL(config.boardIdentifier);
     TEST_ASSERT_EQUAL_STRING("test_user", config.mqttUsername);
     TEST_ASSERT_EQUAL_STRING("test_pass", config.mqttPassword);
-    TEST_ASSERT_EQUAL_STRING("test_board", config.boardName);
+    TEST_ASSERT_EQUAL_STRING("test_board", config.boardIdentifier);
     TEST_ASSERT_EQUAL_STRING("1.0.0", config.firmwareVersion);
     TEST_ASSERT_TRUE(config.enableOta);
 }
@@ -30,14 +30,14 @@ void test_client_config_null_credentials() {
     ClientConfig config = {
         .mqttUsername = nullptr,
         .mqttPassword = nullptr,
-        .boardName = nullptr,
+        .boardIdentifier = nullptr,
         .firmwareVersion = nullptr,
         .enableOta = false
     };
 
     TEST_ASSERT_NULL(config.mqttUsername);
     TEST_ASSERT_NULL(config.mqttPassword);
-    TEST_ASSERT_NULL(config.boardName);
+    TEST_ASSERT_NULL(config.boardIdentifier);
     TEST_ASSERT_NULL(config.firmwareVersion);
     TEST_ASSERT_FALSE(config.enableOta);
 }
