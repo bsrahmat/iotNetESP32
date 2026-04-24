@@ -11,7 +11,6 @@ IotNetESP32 is a library for ESP32 that simplifies IoT development by providing 
 - **Real-Time Dashboard Integration**: Integrates with a real-time dashboard for data visualization and monitoring.
 - **Over-The-Air (OTA) Firmware Updates**: Allows wireless firmware updates for easy device maintenance.
 - **JSON Data Handling**: Processes data in JSON format for high compatibility and flexibility.
-- **Thread-Safe State Management**: Ensures thread-safe management of device states to maintain stability and reliability.
 - **Automatic Device Validation and Status Updates**: Automatically validates devices and updates their status for seamless operation.
 
 ## Installation
