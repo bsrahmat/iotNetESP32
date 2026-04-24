@@ -46,7 +46,7 @@ class IotNetESP32 {
     void begin(const ClientConfig &config);
     void begin(const char *mqttUsername,
                const char *mqttPassword,
-               const char *boardName,
+               const char *boardIdentifier,
                const char *firmwareVersion = nullptr,
                bool enableOta = false);
     void connect();
@@ -83,7 +83,7 @@ class IotNetESP32 {
     struct NetworkCredentials {
         const char *mqttUsername;
         const char *mqttPassword;
-        const char *boardName;
+        const char *boardIdentifier;
     };
 
     struct MqttConfig {

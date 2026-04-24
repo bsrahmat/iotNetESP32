@@ -7,7 +7,7 @@
 struct ClientConfig {
   const char *mqttUsername;
   const char *mqttPassword;
-  const char *boardName;
+  const char *boardIdentifier;
   const char *firmwareVersion;
   bool enableOta;
 };

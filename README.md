@@ -48,7 +48,7 @@ const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
 IotNetESP32::ClientConfig config = {
     .mqttUsername = "DEVICE_ID",
     .mqttPassword = "DEVICE_SECRET",
-    .boardName = "BOARD_ID",
+    .boardIdentifier = "BOARD_ID",
     .firmwareVersion = "1.0.0",
     .enableOta = true
 };
@@ -109,7 +109,7 @@ const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
 IotNetESP32::ClientConfig config = {
     .mqttUsername = "DEVICE_ID",
     .mqttPassword = "DEVICE_SECRET",
-    .boardName = "BOARD_ID",
+    .boardIdentifier = "BOARD_ID",
     .firmwareVersion = "1.0.0",
     .enableOta = true
 };
@@ -188,7 +188,7 @@ const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
 IotNetESP32::ClientConfig config = {
     .mqttUsername = "DEVICE_ID",
     .mqttPassword = "DEVICE_SECRET",
-    .boardName = "BOARD_ID",
+    .boardIdentifier = "BOARD_ID",
     .firmwareVersion = "1.0.0",
     .enableOta = true
 };
@@ -303,7 +303,7 @@ You can now start the client without compile-time credential globals by passing 
 IotNetESP32::ClientConfig cfg = {
   .mqttUsername = "DEVICE_ID",
   .mqttPassword = "MQTT_PASSWORD",
-  .boardName = "BOARD_IDENTIFIER",
+  .boardIdentifier = "BOARD_IDENTIFIER",
   .firmwareVersion = "1.2.3",
   .enableOta = true
 };

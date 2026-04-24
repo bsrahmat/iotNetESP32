@@ -9,7 +9,7 @@ bool buildDeviceTopic(
     char *outTopic,
     size_t outSize,
     const char *deviceId,
-    const char *boardName,
+    const char *boardIdentifier,
     const char *channel
 );
 
@@ -17,7 +17,7 @@ bool buildPinTopic(
     char *outTopic,
     size_t outSize,
     const char *deviceId,
-    const char *boardName,
+    const char *boardIdentifier,
     int pin
 );
 

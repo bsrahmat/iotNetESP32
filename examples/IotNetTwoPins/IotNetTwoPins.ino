@@ -12,7 +12,7 @@ const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
 IotNetESP32::ClientConfig IOTNET_CONFIG = {
     .mqttUsername = "DEVICE_ID",
     .mqttPassword = "DEVICE_SECRET",
-    .boardName = "BOARD_ID",
+    .boardIdentifier = "BOARD_ID",
     .firmwareVersion = "1.0.0",
     .enableOta = true
 };
