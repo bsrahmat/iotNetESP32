@@ -89,7 +89,7 @@ class IotNetESP32 {
     struct MqttConfig {
         const char *server;
         int port;
-        int statusPin;
+        int statusPin = -1;
     };
 
     struct CertificateInfo {

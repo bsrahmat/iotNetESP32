@@ -6,3 +6,7 @@ certs
 src/iotNetCredentials.cpp
 src/iotNetCredentials.h
 src/main.cpp
+esp32.log
+esp32_ota.log
+status.txt
+test_blink/

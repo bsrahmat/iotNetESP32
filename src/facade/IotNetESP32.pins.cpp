@@ -136,7 +136,7 @@ bool IotNetESP32::copyPayloadToBuffer(
     char *buffer,
     size_t bufferSize
 ) {
-    if (!payload || !buffer || bufferSize == 0 || length >= bufferSize) {
+    if (!payload || !buffer || bufferSize == 0 || length >= bufferSize - 1) {
         return false;
     }
 

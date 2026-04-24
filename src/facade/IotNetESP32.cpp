@@ -25,6 +25,7 @@ IotNetESP32::IotNetESP32()
         pins[i].updated = false;
         pins[i].value[0] = '\0';
     }
+    memset(callbacks, 0, sizeof(callbacks));
 
 }
 
@@ -229,6 +230,10 @@ bool IotNetESP32::reconnectMQTT() {
     if (!credentials.mqttUsername || !credentials.mqttPassword || !credentials.boardIdentifier) {
         Serial.println("Error: MQTT credentials or board name not set");
         return false;
+    }
+
+    if (mqttConfig.statusPin < 0 || mqttConfig.statusPin >= MAX_PINS) {
+        mqttConfig.statusPin = 0;
     }
 
     if (!pins[mqttConfig.statusPin].initialized) {
